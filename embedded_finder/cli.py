@@ -204,6 +204,18 @@ def reindex(path):
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--port", "-p", default=8080, help="Port to run the web server on.")
+@click.option("--host", default="127.0.0.1", help="Host to bind to.")
+def web(port, host):
+    """Start the web UI for semantic search."""
+    from embedded_finder.web.app import create_app
+
+    app = create_app()
+    click.echo(f"Starting EmbeddedFinder web UI at http://{host}:{port}")
+    app.run(host=host, port=port, debug=False)
+
+
 def _format_size(size_bytes: int) -> str:
     """Format file size in human-readable form."""
     if size_bytes < 1024:
