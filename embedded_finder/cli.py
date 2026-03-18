@@ -63,11 +63,13 @@ def index(path, extensions):
 @click.argument("query")
 @click.option("--top", "-n", default=10, help="Number of results to show.")
 @click.option("--min-score", default=0.0, help="Minimum similarity score (0-1).")
-def search(query, top, min_score):
+@click.option("--plain", is_flag=True, help="Use plain text output (no rich formatting).")
+def search(query, top, min_score, plain):
     """Search indexed files using natural language."""
     from embedded_finder.embedder import Embedder
     from embedded_finder.store import VectorStore
     from embedded_finder.search import SearchEngine
+    from embedded_finder.ranker import rank_results, print_results
 
     api_key = get_api_key()
     if not api_key:
@@ -80,20 +82,24 @@ def search(query, top, min_score):
         engine = SearchEngine(embedder=embedder, store=store)
 
         results = engine.search(query, n_results=top, min_score=min_score)
+        results = rank_results(results, query)
 
         if not results:
             click.echo("No results found.")
             return
 
-        click.echo(f"\nFound {len(results)} results for: \"{query}\"\n")
-        for i, r in enumerate(results, 1):
-            score_pct = f"{r.score * 100:.1f}%"
-            click.echo(f"  {i}. [{score_pct}] {r.file_path}")
-            click.echo(f"     {r.file_name} ({r.file_extension}, {_format_size(r.file_size)})")
-            if r.snippet:
-                snippet = r.snippet.replace("\n", " ")[:120]
-                click.echo(f"     > {snippet}...")
-            click.echo()
+        if plain:
+            click.echo(f"\nFound {len(results)} results for: \"{query}\"\n")
+            for i, r in enumerate(results, 1):
+                score_pct = f"{r.score * 100:.1f}%"
+                click.echo(f"  {i}. [{score_pct}] {r.file_path}")
+                click.echo(f"     {r.file_name} ({r.file_extension}, {_format_size(r.file_size)})")
+                if r.snippet:
+                    snippet = r.snippet.replace("\n", " ")[:120]
+                    click.echo(f"     > {snippet}...")
+                click.echo()
+        else:
+            print_results(results, query)
 
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
