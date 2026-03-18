@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "embedded-finder"
+version = "0.1.0"
+description = "Semantic file search powered by Google Gemini embeddings"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai>=1.0.0",
+    "chromadb>=0.4.0",
+    "click>=8.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0",
+    "watchdog>=3.0",
+    "PyPDF2>=3.0",
+    "python-docx>=1.0",
+    "flask>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+efind = "embedded_finder.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["embedded_finder*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
