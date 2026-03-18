@@ -8,11 +8,15 @@ from embedded_finder import __version__
 from embedded_finder.config import get_api_key, get_db_dir
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="efind")
-def cli():
+@click.pass_context
+def cli(ctx):
     """EmbeddedFinder - Semantic file search powered by Google Gemini embeddings."""
-    pass
+    if ctx.invoked_subcommand is None:
+        # No subcommand → launch interactive TUI
+        from embedded_finder.tui import run_interactive
+        run_interactive()
 
 
 @cli.command()
