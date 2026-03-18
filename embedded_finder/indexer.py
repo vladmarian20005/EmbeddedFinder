@@ -5,7 +5,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from embedded_finder.crawler import crawl, FileInfo
-from embedded_finder.extractor import extract_text, chunk_text
+from embedded_finder.extractor import (
+    extract_text, chunk_text, is_natively_embeddable, get_mime_type,
+)
 from embedded_finder.embedder import Embedder
 from embedded_finder.store import VectorStore
 
@@ -90,33 +92,96 @@ class Indexer:
         existing: dict[str, str],
         stats: IndexStats,
     ) -> None:
-        """Index a single file, skipping if content hash matches."""
+        """Index a single file, skipping if content hash matches.
+
+        Uses native multimodal embedding for images, audio, video, and small PDFs.
+        Falls back to text extraction + chunking for text/code files and large PDFs.
+        """
+        file_path_str = str(file_info.path)
+
+        if is_natively_embeddable(file_info.path):
+            self._index_native(file_info, existing, stats)
+        else:
+            self._index_text(file_info, existing, stats)
+
+    def _index_native(
+        self,
+        file_info: FileInfo,
+        existing: dict[str, str],
+        stats: IndexStats,
+    ) -> None:
+        """Index a file using native multimodal embedding (images, audio, video, small PDFs)."""
+        file_path_str = str(file_info.path)
+
+        # Use file bytes hash for dedup
+        file_bytes = file_info.path.read_bytes()
+        if not file_bytes:
+            stats.skipped += 1
+            return
+
+        content_hash = hashlib.sha256(file_bytes).hexdigest()
+
+        if existing.get(file_path_str) == content_hash:
+            stats.skipped += 1
+            return
+
+        self._store.delete_by_file_path(file_path_str)
+
+        mime_type = get_mime_type(file_info.path)
+        embedding = self._embedder.embed_file(file_info.path, mime_type)
+
+        # For native embeds, store file name as the document text (for search snippet)
+        display_text = f"[{file_info.extension.upper().lstrip('.')}] {file_info.name}"
+        doc_id = f"{file_path_str}::native_0"
+
+        self._store.add_documents(
+            ids=[doc_id],
+            texts=[display_text],
+            embeddings=[embedding],
+            metadatas=[{
+                "file_path": file_path_str,
+                "file_name": file_info.name,
+                "file_extension": file_info.extension,
+                "file_size": file_info.size_bytes,
+                "chunk_index": 0,
+                "total_chunks": 1,
+                "content_hash": content_hash,
+                "embed_mode": "native",
+            }],
+        )
+
+        stats.indexed += 1
+        stats.chunks_created += 1
+
+    def _index_text(
+        self,
+        file_info: FileInfo,
+        existing: dict[str, str],
+        stats: IndexStats,
+    ) -> None:
+        """Index a file using text extraction + chunking + text embedding."""
+        file_path_str = str(file_info.path)
+
         text = extract_text(file_info.path)
         if not text.strip():
             stats.skipped += 1
             return
 
         content_hash = hashlib.sha256(text.encode()).hexdigest()
-        file_path_str = str(file_info.path)
 
-        # Skip if already indexed with same hash
         if existing.get(file_path_str) == content_hash:
             stats.skipped += 1
             return
 
-        # Remove old entries for this file
         self._store.delete_by_file_path(file_path_str)
 
-        # Chunk the text
         chunks = chunk_text(text)
         if not chunks:
             stats.skipped += 1
             return
 
-        # Generate embeddings
         embeddings = self._embedder.embed_batch(chunks)
 
-        # Store with metadata
         ids = [f"{file_path_str}::chunk_{i}" for i in range(len(chunks))]
         metadatas = [
             {
@@ -127,6 +192,7 @@ class Indexer:
                 "chunk_index": i,
                 "total_chunks": len(chunks),
                 "content_hash": content_hash,
+                "embed_mode": "text",
             }
             for i in range(len(chunks))
         ]

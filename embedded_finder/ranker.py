@@ -12,30 +12,25 @@ from embedded_finder.search import SearchResult
 
 # File type icons (using text symbols for compatibility)
 FILE_ICONS = {
-    ".py": "PY",
-    ".js": "JS",
-    ".ts": "TS",
-    ".java": "JV",
-    ".go": "GO",
-    ".rs": "RS",
-    ".rb": "RB",
-    ".c": "C ",
-    ".cpp": "C+",
-    ".h": "H ",
-    ".html": "HT",
-    ".css": "CS",
-    ".json": "JS",
-    ".yaml": "YM",
-    ".yml": "YM",
-    ".md": "MD",
-    ".txt": "TX",
-    ".pdf": "PD",
-    ".docx": "DC",
-    ".sql": "SQ",
-    ".sh": "SH",
-    ".xml": "XM",
-    ".csv": "CV",
-    ".toml": "TM",
+    # Code
+    ".py": "PY", ".js": "JS", ".ts": "TS", ".java": "JV",
+    ".go": "GO", ".rs": "RS", ".rb": "RB", ".c": "C ",
+    ".cpp": "C+", ".h": "H ", ".sh": "SH", ".sql": "SQ",
+    # Markup / data
+    ".html": "HT", ".css": "CS", ".json": "JS",
+    ".yaml": "YM", ".yml": "YM", ".xml": "XM",
+    ".md": "MD", ".txt": "TX", ".csv": "CV", ".toml": "TM",
+    # Documents
+    ".pdf": "PD", ".docx": "DC",
+    # Images
+    ".png": "IM", ".jpg": "IM", ".jpeg": "IM",
+    ".gif": "IM", ".webp": "IM", ".bmp": "IM",
+    # Audio
+    ".mp3": "AU", ".wav": "AU", ".ogg": "AU",
+    ".flac": "AU", ".m4a": "AU",
+    # Video
+    ".mp4": "VD", ".mov": "VD", ".avi": "VD",
+    ".mkv": "VD", ".webm": "VD",
 }
 
 

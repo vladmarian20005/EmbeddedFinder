@@ -1,8 +1,20 @@
 """Google Gemini embedding integration for EmbeddedFinder."""
 
 import time
+from pathlib import Path
 
 from embedded_finder.config import DEFAULT_EMBEDDING_MODEL, get_api_key
+
+# Lazy-loaded; patched in tests
+types = None
+
+
+def _get_types():
+    global types
+    if types is None:
+        from google.genai import types as _types
+        types = _types
+    return types
 
 
 class EmbeddingError(Exception):
@@ -80,3 +92,48 @@ class Embedder:
                         raise EmbeddingError(f"Embedding failed: {e}")
 
         return all_embeddings
+
+    def embed_file(self, file_path: str | Path, mime_type: str) -> list[float]:
+        """Embed a file natively using multimodal embedding (images, PDFs, audio, video).
+
+        Sends raw file bytes to the Gemini Embedding 2 model via types.Part.from_bytes().
+
+        Args:
+            file_path: Path to the file.
+            mime_type: MIME type of the file (e.g. 'image/png', 'application/pdf').
+
+        Returns:
+            Embedding vector as a list of floats.
+        """
+        path = Path(file_path)
+        if not path.exists():
+            raise EmbeddingError(f"File not found: {file_path}")
+
+        file_bytes = path.read_bytes()
+        if not file_bytes:
+            raise EmbeddingError(f"File is empty: {file_path}")
+
+        retries = 0
+        max_retries = 3
+        while retries <= max_retries:
+            try:
+                _types = _get_types()
+                result = self._client.models.embed_content(
+                    model=self._model,
+                    contents=_types.Part.from_bytes(
+                        data=file_bytes,
+                        mime_type=mime_type,
+                    ),
+                )
+                return list(result.embeddings[0].values)
+            except Exception as e:
+                error_str = str(e).lower()
+                if "rate" in error_str or "429" in error_str or "quota" in error_str:
+                    retries += 1
+                    if retries > max_retries:
+                        raise EmbeddingError(
+                            f"Rate limit exceeded after {max_retries} retries: {e}"
+                        )
+                    time.sleep(2 ** retries)
+                else:
+                    raise EmbeddingError(f"Embedding file failed: {e}")

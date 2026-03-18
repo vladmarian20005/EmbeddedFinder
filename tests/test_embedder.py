@@ -1,6 +1,6 @@
 """Tests for Google embedding integration."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 
 from embedded_finder.embedder import Embedder, EmbeddingError
@@ -36,7 +36,7 @@ def test_embed_text_calls_api_with_correct_model(mock_client):
     embedder = Embedder(api_key="test-key", client=mock_client)
     embedder.embed_text("Hello world")
     mock_client.models.embed_content.assert_called_once_with(
-        model="gemini-embedding-001",
+        model="gemini-embedding-2-preview",
         contents="Hello world",
     )
 
@@ -102,3 +102,68 @@ def test_custom_model(mock_client):
         model="custom-model",
         contents="Hello",
     )
+
+
+# --- embed_file tests (multimodal) ---
+
+@pytest.fixture
+def mock_types():
+    """Mock the _get_types function to return a fake types module."""
+    fake_types = MagicMock()
+    fake_types.Part.from_bytes.return_value = MagicMock()
+    with patch("embedded_finder.embedder._get_types", return_value=fake_types):
+        yield fake_types
+
+
+def test_embed_file_returns_embedding(mock_types, mock_client, tmp_dir):
+    img = tmp_dir / "test.png"
+    img.write_bytes(b"\x89PNG" + b"\x00" * 100)
+
+    embedder = Embedder(api_key="test-key", client=mock_client)
+    result = embedder.embed_file(img, "image/png")
+    assert len(result) == 3072
+
+    mock_types.Part.from_bytes.assert_called_once()
+    call_kwargs = mock_types.Part.from_bytes.call_args
+    assert call_kwargs[1]["mime_type"] == "image/png"
+
+
+def test_embed_file_raises_for_missing_file(mock_types, mock_client):
+    embedder = Embedder(api_key="test-key", client=mock_client)
+    with pytest.raises(EmbeddingError, match="File not found"):
+        embedder.embed_file("/nonexistent/file.png", "image/png")
+
+
+def test_embed_file_raises_for_empty_file(mock_types, mock_client, tmp_dir):
+    empty = tmp_dir / "empty.png"
+    empty.write_bytes(b"")
+
+    embedder = Embedder(api_key="test-key", client=mock_client)
+    with pytest.raises(EmbeddingError, match="File is empty"):
+        embedder.embed_file(empty, "image/png")
+
+
+def test_embed_file_handles_rate_limit(mock_types, mock_client, tmp_dir):
+    fake = FakeEmbedding([0.1] * 3072)
+    mock_client.models.embed_content.side_effect = [
+        Exception("429 rate limit exceeded"),
+        FakeEmbedResult([fake]),
+    ]
+
+    img = tmp_dir / "test.jpg"
+    img.write_bytes(b"\xff\xd8" + b"\x00" * 50)
+
+    embedder = Embedder(api_key="test-key", client=mock_client)
+    result = embedder.embed_file(img, "image/jpeg")
+    assert len(result) == 3072
+
+
+def test_embed_file_raises_on_non_rate_error(mock_types, mock_client, tmp_dir):
+    mock_client.models.embed_content.side_effect = Exception("Invalid content")
+
+    img = tmp_dir / "bad.png"
+    img.write_bytes(b"\x00" * 50)
+
+    embedder = Embedder(api_key="test-key", client=mock_client)
+    with pytest.raises(EmbeddingError, match="Embedding file failed"):
+        embedder.embed_file(img, "image/png")

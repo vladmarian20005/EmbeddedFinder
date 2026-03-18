@@ -3,7 +3,15 @@
 import json
 from pathlib import Path
 
-from embedded_finder.config import DEFAULT_CHUNK_MAX_TOKENS
+from embedded_finder.config import (
+    DEFAULT_CHUNK_MAX_TOKENS,
+    EXTENSION_MIME_MAP,
+    IMAGE_EXTENSIONS,
+    AUDIO_EXTENSIONS,
+    VIDEO_EXTENSIONS,
+    NATIVE_EMBED_EXTENSIONS,
+    MAX_NATIVE_PDF_PAGES,
+)
 
 # Extensions treated as plain text (read directly)
 PLAIN_TEXT_EXTENSIONS = {
@@ -15,6 +23,35 @@ PLAIN_TEXT_EXTENSIONS = {
     ".sql", ".r", ".m", ".lua", ".pl", ".ex", ".exs",
     ".csv",
 }
+
+
+def get_mime_type(file_path: str | Path) -> str:
+    """Get the MIME type for a file based on its extension."""
+    ext = Path(file_path).suffix.lower()
+    return EXTENSION_MIME_MAP.get(ext, "application/octet-stream")
+
+
+def is_natively_embeddable(file_path: str | Path) -> bool:
+    """Check if a file can be embedded natively (without text extraction).
+
+    Returns True for images, audio, video, and small PDFs (≤6 pages).
+    """
+    ext = Path(file_path).suffix.lower()
+    if ext in NATIVE_EMBED_EXTENSIONS:
+        return True
+    if ext == ".pdf":
+        return get_pdf_page_count(file_path) <= MAX_NATIVE_PDF_PAGES
+    return False
+
+
+def get_pdf_page_count(file_path: str | Path) -> int:
+    """Get the number of pages in a PDF file."""
+    try:
+        from PyPDF2 import PdfReader
+        reader = PdfReader(str(file_path))
+        return len(reader.pages)
+    except Exception:
+        return 999  # Assume large on error, fallback to text extraction
 
 
 def extract_text(file_path: str | Path) -> str:

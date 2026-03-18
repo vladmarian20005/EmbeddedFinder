@@ -7,12 +7,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEFAULT_EMBEDDING_MODEL = "gemini-embedding-001"
+DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2-preview"
 DEFAULT_EMBEDDING_DIMENSIONS = 3072
 DEFAULT_DB_DIR = ".embeddedfinder/db"
 DEFAULT_MAX_FILE_SIZE_MB = 50
 DEFAULT_CHUNK_MAX_TOKENS = 2000
 DEFAULT_SEARCH_RESULTS = 10
+MAX_NATIVE_PDF_PAGES = 6
+
+# Multimodal extensions — these are embedded natively (raw bytes sent to model)
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
+NATIVE_EMBED_EXTENSIONS = IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
+# PDFs are conditionally native (≤6 pages) or text-extracted (>6 pages)
+
+# MIME type mapping for multimodal embedding
+EXTENSION_MIME_MAP = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
+    ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
+    ".flac": "audio/flac", ".m4a": "audio/mp4",
+    ".mp4": "video/mp4", ".mov": "video/quicktime",
+    ".avi": "video/x-msvideo", ".mkv": "video/x-matroska", ".webm": "video/webm",
+    ".pdf": "application/pdf",
+}
 
 SUPPORTED_EXTENSIONS = {
     # Plain text / code
@@ -26,6 +45,12 @@ SUPPORTED_EXTENSIONS = {
     ".json", ".csv",
     # Documents
     ".pdf", ".docx",
+    # Images (native multimodal)
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
+    # Audio (native multimodal)
+    ".mp3", ".wav", ".ogg", ".flac", ".m4a",
+    # Video (native multimodal)
+    ".mp4", ".mov", ".avi", ".mkv", ".webm",
 }
 
 IGNORE_DIRS = {

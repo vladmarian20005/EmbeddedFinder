@@ -82,3 +82,82 @@ def test_on_progress_callback(indexer, sample_files, mock_embedder):
 
     indexer.index_directory(sample_files, on_progress=on_progress)
     assert len(progress_calls) > 0
+
+
+# --- Multimodal indexing tests ---
+
+def test_index_image_uses_native_embed(mock_embedder, store, tmp_dir):
+    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_file.return_value = [0.2] * 10
+
+    # Create an image file
+    img = tmp_dir / "photo.png"
+    img.write_bytes(b"\x89PNG" + b"\x00" * 100)
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    stats = indexer.index_file(img)
+
+    assert stats.indexed == 1
+    # Should have called embed_file, not embed_batch
+    mock_embedder.embed_file.assert_called_once()
+    mock_embedder.embed_batch.assert_not_called()
+
+
+def test_index_text_file_uses_text_embed(mock_embedder, store, tmp_dir):
+    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+
+    txt = tmp_dir / "code.py"
+    txt.write_text("def hello(): return 42")
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    stats = indexer.index_file(txt)
+
+    assert stats.indexed == 1
+    mock_embedder.embed_batch.assert_called_once()
+    mock_embedder.embed_file.assert_not_called()
+
+
+def test_index_small_pdf_uses_native_embed(mock_embedder, store, tmp_dir):
+    from PyPDF2 import PdfWriter
+    mock_embedder.embed_file.return_value = [0.3] * 10
+
+    pdf = tmp_dir / "small.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with open(pdf, "wb") as f:
+        writer.write(f)
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    stats = indexer.index_file(pdf)
+
+    assert stats.indexed == 1
+    mock_embedder.embed_file.assert_called_once()
+
+
+def test_index_audio_uses_native_embed(mock_embedder, store, tmp_dir):
+    mock_embedder.embed_file.return_value = [0.4] * 10
+
+    audio = tmp_dir / "song.mp3"
+    audio.write_bytes(b"\xff\xfb" + b"\x00" * 200)
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    stats = indexer.index_file(audio)
+
+    assert stats.indexed == 1
+    mock_embedder.embed_file.assert_called_once()
+
+
+def test_index_native_file_skips_when_unchanged(mock_embedder, store, tmp_dir):
+    mock_embedder.embed_file.return_value = [0.2] * 10
+
+    img = tmp_dir / "photo.jpg"
+    img.write_bytes(b"\xff\xd8" + b"\x00" * 100)
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+
+    stats1 = indexer.index_file(img)
+    assert stats1.indexed == 1
+
+    stats2 = indexer.index_file(img)
+    assert stats2.skipped == 1
+    assert stats2.indexed == 0
