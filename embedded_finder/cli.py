@@ -139,6 +139,71 @@ def clear():
         sys.exit(1)
 
 
+@cli.command()
+@click.argument("path", type=click.Path(exists=True))
+def watch(path):
+    """Watch a directory and re-index files on changes."""
+    from embedded_finder.embedder import Embedder
+    from embedded_finder.store import VectorStore
+    from embedded_finder.indexer import Indexer
+    from embedded_finder.watcher import FileWatcher
+
+    api_key = get_api_key()
+    if not api_key:
+        click.echo("Error: GOOGLE_API_KEY environment variable not set.", err=True)
+        sys.exit(1)
+
+    try:
+        embedder = Embedder(api_key=api_key)
+        store = VectorStore()
+        indexer = Indexer(embedder=embedder, store=store)
+        watcher = FileWatcher(indexer, [path])
+
+        click.echo(f"Watching {path} for changes... (Ctrl+C to stop)")
+        watcher.start()
+
+        import time
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            click.echo("\nStopping watcher...")
+            watcher.stop()
+
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("path", type=click.Path(exists=True))
+def reindex(path):
+    """Force re-index a directory (only changed files)."""
+    from embedded_finder.embedder import Embedder
+    from embedded_finder.store import VectorStore
+    from embedded_finder.indexer import Indexer
+
+    api_key = get_api_key()
+    if not api_key:
+        click.echo("Error: GOOGLE_API_KEY environment variable not set.", err=True)
+        sys.exit(1)
+
+    try:
+        embedder = Embedder(api_key=api_key)
+        store = VectorStore()
+        indexer = Indexer(embedder=embedder, store=store)
+
+        click.echo(f"Re-indexing {path}...")
+        stats = indexer.index_directory(path)
+
+        click.echo(f"\nDone! {stats.indexed} files re-indexed, "
+                    f"{stats.skipped} unchanged, {stats.errors} errors.")
+
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
 def _format_size(size_bytes: int) -> str:
     """Format file size in human-readable form."""
     if size_bytes < 1024:
