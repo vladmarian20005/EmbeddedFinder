@@ -1,0 +1,10 @@
+name: service_1
+version: 1.1.0
+replicas: 3
+env:
+  DATABASE_URL: postgres://localhost/db_1
+  REDIS_URL: redis://localhost:6379
+  LOG_LEVEL: info
+resources:
+  cpu: 500m
+  memory: 512Mi

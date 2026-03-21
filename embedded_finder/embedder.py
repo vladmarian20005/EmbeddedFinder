@@ -1,10 +1,18 @@
 """Google Gemini embedding integration for EmbeddedFinder."""
 
 import logging
+import random
 import time
 from pathlib import Path
 
-from embedded_finder.config import DEFAULT_EMBEDDING_MODEL, get_api_key
+from embedded_finder.config import (
+    DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_EMBED_BATCH_SIZE,
+    DEFAULT_MAX_RETRIES,
+    RETRY_BASE_SECONDS,
+    RETRY_MAX_JITTER_SECONDS,
+    get_api_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +47,7 @@ class Embedder:
         api_key: str | None = None,
         model: str = DEFAULT_EMBEDDING_MODEL,
         client=None,
+        rate_limiter=None,
     ):
         key = api_key or get_api_key()
         if not key and client is None:
@@ -48,6 +57,7 @@ class Embedder:
             )
         self._client = client if client is not None else _create_client(key)
         self._model = model
+        self._rate_limiter = rate_limiter
 
     def embed_text(self, text: str) -> list[float]:
         """Generate an embedding for a single text."""
@@ -60,7 +70,7 @@ class Embedder:
         )
         return list(result.embeddings[0].values)
 
-    def embed_batch(self, texts: list[str], batch_size: int = 20) -> list[list[float]]:
+    def embed_batch(self, texts: list[str], batch_size: int = DEFAULT_EMBED_BATCH_SIZE) -> list[list[float]]:
         """Generate embeddings for multiple texts with batching."""
         if not texts:
             return []
@@ -71,9 +81,12 @@ class Embedder:
             batch = texts[i : i + batch_size]
             batch = [t if t.strip() else " " for t in batch]
 
+            if self._rate_limiter:
+                estimated_tokens = sum(len(t) // 4 for t in batch)
+                self._rate_limiter.acquire(estimated_tokens)
+
             retries = 0
-            max_retries = 3
-            while retries <= max_retries:
+            while retries <= DEFAULT_MAX_RETRIES:
                 try:
                     result = self._client.models.embed_content(
                         model=self._model,
@@ -86,11 +99,14 @@ class Embedder:
                     error_str = str(e).lower()
                     if "rate" in error_str or "429" in error_str or "quota" in error_str:
                         retries += 1
-                        if retries > max_retries:
+                        if retries > DEFAULT_MAX_RETRIES:
                             raise EmbeddingError(
-                                f"Rate limit exceeded after {max_retries} retries: {e}"
+                                f"Rate limit exceeded after {DEFAULT_MAX_RETRIES} retries: {e}"
                             )
-                        time.sleep(2 ** retries)
+                        time.sleep(
+                            RETRY_BASE_SECONDS * (2 ** retries)
+                            + random.uniform(0, RETRY_MAX_JITTER_SECONDS)
+                        )
                     else:
                         raise EmbeddingError(f"Embedding failed: {e}")
 
@@ -134,9 +150,14 @@ class Embedder:
         if not data:
             raise EmbeddingError("Cannot embed empty data.")
 
+        if self._rate_limiter:
+            # Binary files (images/audio/video) don't tokenize by byte count.
+            # Use a fixed conservative estimate instead of len(data)//4 which
+            # wildly overestimates (a 10MB MP3 is NOT 2.5M tokens).
+            self._rate_limiter.acquire(2000)
+
         retries = 0
-        max_retries = 3
-        while retries <= max_retries:
+        while retries <= DEFAULT_MAX_RETRIES:
             try:
                 _types = _get_types()
                 result = self._client.models.embed_content(
@@ -151,11 +172,14 @@ class Embedder:
                 error_str = str(e).lower()
                 if "rate" in error_str or "429" in error_str or "quota" in error_str:
                     retries += 1
-                    if retries > max_retries:
+                    if retries > DEFAULT_MAX_RETRIES:
                         raise EmbeddingError(
-                            f"Rate limit exceeded after {max_retries} retries: {e}"
+                            f"Rate limit exceeded after {DEFAULT_MAX_RETRIES} retries: {e}"
                         )
-                    time.sleep(2 ** retries)
+                    time.sleep(
+                        RETRY_BASE_SECONDS * (2 ** retries)
+                        + random.uniform(0, RETRY_MAX_JITTER_SECONDS)
+                    )
                 else:
                     raise EmbeddingError(f"Embedding file failed: {e}")
 
@@ -226,9 +250,11 @@ class Embedder:
         _types = _get_types()
         content = _types.Content(parts=parts)
 
+        if self._rate_limiter:
+            self._rate_limiter.acquire(2000)
+
         retries = 0
-        max_retries = 3
-        while retries <= max_retries:
+        while retries <= DEFAULT_MAX_RETRIES:
             try:
                 result = self._client.models.embed_content(
                     model=self._model,
@@ -239,11 +265,14 @@ class Embedder:
                 error_str = str(e).lower()
                 if "rate" in error_str or "429" in error_str or "quota" in error_str:
                     retries += 1
-                    if retries > max_retries:
+                    if retries > DEFAULT_MAX_RETRIES:
                         raise EmbeddingError(
-                            f"Rate limit exceeded after {max_retries} retries: {e}"
+                            f"Rate limit exceeded after {DEFAULT_MAX_RETRIES} retries: {e}"
                         )
-                    time.sleep(2 ** retries)
+                    time.sleep(
+                        RETRY_BASE_SECONDS * (2 ** retries)
+                        + random.uniform(0, RETRY_MAX_JITTER_SECONDS)
+                    )
                 else:
                     raise EmbeddingError(f"Multipart embedding failed: {e}")
 

@@ -1,0 +1,15 @@
+{
+  "name": "service_4",
+  "port": 3004,
+  "debug": false,
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "db_4"
+  },
+  "features": [
+    "tracing",
+    "cache",
+    "auth"
+  ]
+}

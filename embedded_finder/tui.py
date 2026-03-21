@@ -387,6 +387,19 @@ def _search_with_spinner(engine, query: str, n_results: int, min_score: float):
     return result_holder[0], elapsed
 
 
+def _format_eta(seconds: float) -> str:
+    """Format seconds into a human-readable ETA string."""
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    elif seconds < 3600:
+        m, s = divmod(int(seconds), 60)
+        return f"{m}m {s}s"
+    else:
+        h, rem = divmod(int(seconds), 3600)
+        m = rem // 60
+        return f"{h}h {m}m"
+
+
 def _index_with_progress(indexer, path: str, extensions=None):
     """Run indexing with Rich progress bar."""
     from embedded_finder.crawler import crawl
@@ -400,6 +413,7 @@ def _index_with_progress(indexer, path: str, extensions=None):
         return None
 
     stats_holder = [None]
+    start_time = time.monotonic()
 
     with Progress(
         SpinnerColumn(),
@@ -413,10 +427,20 @@ def _index_with_progress(indexer, path: str, extensions=None):
         task = progress.add_task("Indexing", total=total, status="")
 
         def on_progress(file_info, stats):
-            progress.update(task, advance=1, status=file_info.name[:40])
+            done = stats.indexed + stats.skipped + stats.errors
+            elapsed = time.monotonic() - start_time
+            if done > 0 and done < total:
+                eta = elapsed / done * (total - done)
+                eta_str = f"ETA {_format_eta(eta)} | {file_info.name[:30]}"
+            else:
+                eta_str = file_info.name[:40]
+            progress.update(task, advance=1, status=eta_str)
 
         stats = indexer.index_directory(path, extensions=extensions, on_progress=on_progress)
         stats_holder[0] = stats
+
+    elapsed = time.monotonic() - start_time
+    console.print(f"  [dim]Completed in {_format_eta(elapsed)}[/dim]")
 
     return stats_holder[0]
 
@@ -429,11 +453,14 @@ def _create_components(api_key: str | None = None):
     from embedded_finder.store import VectorStore
     from embedded_finder.indexer import Indexer
     from embedded_finder.search import SearchEngine
+    from embedded_finder.rate_limiter import TokenBucketRateLimiter
+    from embedded_finder.config import DEFAULT_RATE_LIMIT_TPM, DEFAULT_RATE_LIMIT_RPM
 
     key = api_key or get_api_key()
     if not key:
         return None, None, None, None
-    embedder = Embedder(api_key=key)
+    rate_limiter = TokenBucketRateLimiter(tpm=DEFAULT_RATE_LIMIT_TPM, rpm=DEFAULT_RATE_LIMIT_RPM)
+    embedder = Embedder(api_key=key, rate_limiter=rate_limiter)
     store = VectorStore()
     indexer = Indexer(embedder=embedder, store=store)
     engine = SearchEngine(embedder=embedder, store=store)

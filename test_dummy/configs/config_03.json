@@ -1,0 +1,15 @@
+{
+  "name": "service_3",
+  "port": 3003,
+  "debug": false,
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "db_3"
+  },
+  "features": [
+    "cache",
+    "logging",
+    "metrics"
+  ]
+}

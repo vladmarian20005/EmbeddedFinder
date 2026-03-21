@@ -1,0 +1,15 @@
+{
+  "name": "service_2",
+  "port": 3002,
+  "debug": true,
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "db_2"
+  },
+  "features": [
+    "logging",
+    "auth",
+    "tracing"
+  ]
+}

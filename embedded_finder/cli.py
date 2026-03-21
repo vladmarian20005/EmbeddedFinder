@@ -5,7 +5,7 @@ import sys
 import click
 
 from embedded_finder import __version__
-from embedded_finder.config import get_api_key, get_db_dir
+from embedded_finder.config import get_api_key, get_db_dir, DEFAULT_RATE_LIMIT_TPM, DEFAULT_RATE_LIMIT_RPM
 
 
 @click.group(invoke_without_command=True)
@@ -36,20 +36,32 @@ def index(path, extensions):
     ext_set = set(extensions) if extensions else None
 
     try:
-        embedder = Embedder(api_key=api_key)
+        from embedded_finder.rate_limiter import TokenBucketRateLimiter
+        rate_limiter = TokenBucketRateLimiter(tpm=DEFAULT_RATE_LIMIT_TPM, rpm=DEFAULT_RATE_LIMIT_RPM)
+        embedder = Embedder(api_key=api_key, rate_limiter=rate_limiter)
         store = VectorStore()
         indexer = Indexer(embedder=embedder, store=store)
 
         click.echo(f"Indexing {path}...")
 
+        import time as _time
+        _start = _time.monotonic()
+
         def on_progress(file_info, stats):
             total = stats.total_files
             done = stats.indexed + stats.skipped + stats.errors
-            click.echo(f"  [{done}/{total}] {file_info.name}", nl=True)
+            elapsed = _time.monotonic() - _start
+            if done > 0 and done < total:
+                eta = elapsed / done * (total - done)
+                eta_str = f" (ETA {_format_eta(eta)})"
+            else:
+                eta_str = ""
+            click.echo(f"  [{done}/{total}] {file_info.name}{eta_str}", nl=True)
 
         stats = indexer.index_directory(path, extensions=ext_set, on_progress=on_progress)
+        elapsed = _time.monotonic() - _start
 
-        click.echo(f"\nDone! {stats.indexed} files indexed, "
+        click.echo(f"\nDone in {_format_eta(elapsed)}! {stats.indexed} files indexed, "
                     f"{stats.skipped} skipped, {stats.errors} errors, "
                     f"{stats.chunks_created} chunks created.")
 
@@ -158,7 +170,9 @@ def watch(path):
         sys.exit(1)
 
     try:
-        embedder = Embedder(api_key=api_key)
+        from embedded_finder.rate_limiter import TokenBucketRateLimiter
+        rate_limiter = TokenBucketRateLimiter(tpm=DEFAULT_RATE_LIMIT_TPM, rpm=DEFAULT_RATE_LIMIT_RPM)
+        embedder = Embedder(api_key=api_key, rate_limiter=rate_limiter)
         store = VectorStore()
         indexer = Indexer(embedder=embedder, store=store)
         watcher = FileWatcher(indexer, [path])
@@ -193,7 +207,9 @@ def reindex(path):
         sys.exit(1)
 
     try:
-        embedder = Embedder(api_key=api_key)
+        from embedded_finder.rate_limiter import TokenBucketRateLimiter
+        rate_limiter = TokenBucketRateLimiter(tpm=DEFAULT_RATE_LIMIT_TPM, rpm=DEFAULT_RATE_LIMIT_RPM)
+        embedder = Embedder(api_key=api_key, rate_limiter=rate_limiter)
         store = VectorStore()
         indexer = Indexer(embedder=embedder, store=store)
 
@@ -218,6 +234,19 @@ def web(port, host):
     app = create_app()
     click.echo(f"Starting EmbeddedFinder web UI at http://{host}:{port}")
     app.run(host=host, port=port, debug=False)
+
+
+def _format_eta(seconds: float) -> str:
+    """Format seconds into a human-readable ETA string."""
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    elif seconds < 3600:
+        m, s = divmod(int(seconds), 60)
+        return f"{m}m {s}s"
+    else:
+        h, rem = divmod(int(seconds), 3600)
+        m = rem // 60
+        return f"{h}h {m}m"
 
 
 def _format_size(size_bytes: int) -> str:

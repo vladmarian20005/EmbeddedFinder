@@ -38,6 +38,15 @@ VIDEO_OVERLAP_SECONDS = 15
 # Files API threshold — files larger than this are uploaded via the Files API
 FILES_API_THRESHOLD_MB = 20
 
+# --- Indexing performance tuning ---
+DEFAULT_EMBED_BATCH_SIZE = 100          # Texts per embedContent call (API max: 250)
+DEFAULT_INDEXING_WORKERS = 4            # ThreadPoolExecutor thread count
+DEFAULT_MAX_RETRIES = 5                 # Retry attempts on rate-limit errors
+DEFAULT_RATE_LIMIT_TPM = 1_000_000     # Tokens-per-minute budget
+DEFAULT_RATE_LIMIT_RPM = 1_500         # Requests-per-minute budget
+RETRY_BASE_SECONDS = 1.0               # Base for exponential backoff
+RETRY_MAX_JITTER_SECONDS = 2.0         # Max random jitter added to backoff
+
 # MIME type mapping for multimodal embedding
 EXTENSION_MIME_MAP = {
     ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",

@@ -1,0 +1,12 @@
+[package]
+name = "myapp_2"
+version = "0.2.1"
+
+[dependencies]
+serde = "1.0"
+tokio = { version = "1", features = ["full"] }
+
+[server]
+host = "0.0.0.0"
+port = 8002
+workers = 2

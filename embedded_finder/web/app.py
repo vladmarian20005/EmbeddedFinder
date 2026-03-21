@@ -4,8 +4,9 @@ import os
 
 from flask import Flask, jsonify, render_template, request
 
-from embedded_finder.config import get_api_key
+from embedded_finder.config import get_api_key, DEFAULT_RATE_LIMIT_TPM, DEFAULT_RATE_LIMIT_RPM
 from embedded_finder.embedder import Embedder
+from embedded_finder.rate_limiter import TokenBucketRateLimiter
 from embedded_finder.ranker import rank_results
 from embedded_finder.search import SearchEngine
 from embedded_finder.store import VectorStore
@@ -21,7 +22,8 @@ def create_app(embedder=None, store=None) -> Flask:
             api_key = get_api_key()
             if not api_key:
                 raise RuntimeError("GOOGLE_API_KEY not set")
-            embedder = Embedder(api_key=api_key)
+            rate_limiter = TokenBucketRateLimiter(tpm=DEFAULT_RATE_LIMIT_TPM, rpm=DEFAULT_RATE_LIMIT_RPM)
+            embedder = Embedder(api_key=api_key, rate_limiter=rate_limiter)
         if store is None:
             store = VectorStore()
         return SearchEngine(embedder=embedder, store=store)
