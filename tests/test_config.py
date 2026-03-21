@@ -5,11 +5,16 @@ from embedded_finder.config import (
     DEFAULT_EMBEDDING_MODEL,
     SUPPORTED_EXTENSIONS,
     IGNORE_DIRS,
+    NATIVE_IMAGE_EXTENSIONS,
+    CONVERTIBLE_IMAGE_EXTENSIONS,
     IMAGE_EXTENSIONS,
     AUDIO_EXTENSIONS,
     VIDEO_EXTENSIONS,
     NATIVE_EMBED_EXTENSIONS,
     EXTENSION_MIME_MAP,
+    MAX_AUDIO_DURATION_SECONDS,
+    MAX_VIDEO_DURATION_SECONDS,
+    FILES_API_THRESHOLD_MB,
     get_api_key,
     get_db_dir,
 )
@@ -35,10 +40,24 @@ def test_supported_extensions_include_multimodal():
     assert ".mp4" in SUPPORTED_EXTENSIONS
 
 
-def test_image_extensions():
-    assert ".png" in IMAGE_EXTENSIONS
-    assert ".jpg" in IMAGE_EXTENSIONS
-    assert ".jpeg" in IMAGE_EXTENSIONS
+def test_supported_extensions_exclude_unsupported_video():
+    assert ".avi" not in SUPPORTED_EXTENSIONS
+    assert ".mkv" not in SUPPORTED_EXTENSIONS
+    assert ".webm" not in SUPPORTED_EXTENSIONS
+
+
+def test_native_image_extensions():
+    assert NATIVE_IMAGE_EXTENSIONS == {".png", ".jpg", ".jpeg"}
+
+
+def test_convertible_image_extensions():
+    assert ".gif" in CONVERTIBLE_IMAGE_EXTENSIONS
+    assert ".webp" in CONVERTIBLE_IMAGE_EXTENSIONS
+    assert ".bmp" in CONVERTIBLE_IMAGE_EXTENSIONS
+
+
+def test_image_extensions_is_union():
+    assert IMAGE_EXTENSIONS == NATIVE_IMAGE_EXTENSIONS | CONVERTIBLE_IMAGE_EXTENSIONS
 
 
 def test_audio_extensions():
@@ -49,10 +68,20 @@ def test_audio_extensions():
 def test_video_extensions():
     assert ".mp4" in VIDEO_EXTENSIONS
     assert ".mov" in VIDEO_EXTENSIONS
+    assert ".avi" not in VIDEO_EXTENSIONS
+    assert ".mkv" not in VIDEO_EXTENSIONS
+    assert ".webm" not in VIDEO_EXTENSIONS
 
 
-def test_native_embed_extensions_includes_all_media():
-    assert IMAGE_EXTENSIONS.issubset(NATIVE_EMBED_EXTENSIONS)
+def test_native_embed_extensions_excludes_convertible_images():
+    # NATIVE_EMBED_EXTENSIONS should NOT include convertible image formats
+    assert ".gif" not in NATIVE_EMBED_EXTENSIONS
+    assert ".webp" not in NATIVE_EMBED_EXTENSIONS
+    assert ".bmp" not in NATIVE_EMBED_EXTENSIONS
+
+
+def test_native_embed_extensions_includes_native_media():
+    assert NATIVE_IMAGE_EXTENSIONS.issubset(NATIVE_EMBED_EXTENSIONS)
     assert AUDIO_EXTENSIONS.issubset(NATIVE_EMBED_EXTENSIONS)
     assert VIDEO_EXTENSIONS.issubset(NATIVE_EMBED_EXTENSIONS)
 
@@ -62,6 +91,21 @@ def test_extension_mime_map():
     assert EXTENSION_MIME_MAP[".jpg"] == "image/jpeg"
     assert EXTENSION_MIME_MAP[".mp4"] == "video/mp4"
     assert EXTENSION_MIME_MAP[".pdf"] == "application/pdf"
+
+
+def test_extension_mime_map_no_unsupported_video():
+    assert ".avi" not in EXTENSION_MIME_MAP
+    assert ".mkv" not in EXTENSION_MIME_MAP
+    assert ".webm" not in EXTENSION_MIME_MAP
+
+
+def test_media_duration_limits():
+    assert MAX_AUDIO_DURATION_SECONDS == 80
+    assert MAX_VIDEO_DURATION_SECONDS == 120
+
+
+def test_files_api_threshold():
+    assert FILES_API_THRESHOLD_MB == 20
 
 
 def test_ignore_dirs_include_common_patterns():

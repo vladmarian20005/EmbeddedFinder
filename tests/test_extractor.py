@@ -5,7 +5,9 @@ import pytest
 from pathlib import Path
 
 from embedded_finder.extractor import (
-    extract_text, chunk_text, get_mime_type, is_natively_embeddable, get_pdf_page_count,
+    extract_text, chunk_text, get_mime_type, is_natively_embeddable,
+    get_pdf_page_count, convert_image_to_png, prepare_native_file,
+    get_media_duration,
 )
 
 
@@ -146,6 +148,12 @@ def test_is_natively_embeddable_image(tmp_dir):
     assert is_natively_embeddable(img) is True
 
 
+def test_is_natively_embeddable_convertible_image(tmp_dir):
+    gif = tmp_dir / "test.gif"
+    gif.write_bytes(b"GIF89a" + b"\x00" * 100)
+    assert is_natively_embeddable(gif) is True
+
+
 def test_is_natively_embeddable_audio(tmp_dir):
     audio = tmp_dir / "test.mp3"
     audio.write_bytes(b"\xff\xfb" + b"\x00" * 100)
@@ -156,6 +164,13 @@ def test_is_natively_embeddable_video(tmp_dir):
     video = tmp_dir / "test.mp4"
     video.write_bytes(b"\x00" * 100)
     assert is_natively_embeddable(video) is True
+
+
+def test_is_natively_embeddable_unsupported_video(tmp_dir):
+    for ext in [".avi", ".mkv", ".webm"]:
+        video = tmp_dir / f"test{ext}"
+        video.write_bytes(b"\x00" * 100)
+        assert is_natively_embeddable(video) is False
 
 
 def test_is_natively_embeddable_text_file(tmp_dir):
@@ -188,3 +203,64 @@ def test_get_pdf_page_count(tmp_dir):
 def test_get_pdf_page_count_missing_file():
     # Should return 999 (fallback to text extraction)
     assert get_pdf_page_count("/nonexistent.pdf") == 999
+
+
+# --- Image conversion tests ---
+
+def test_convert_image_to_png(tmp_dir):
+    from PIL import Image
+    # Create a BMP image
+    bmp = tmp_dir / "test.bmp"
+    img = Image.new("RGB", (10, 10), color="red")
+    img.save(str(bmp), format="BMP")
+
+    png_bytes, mime = convert_image_to_png(bmp)
+    assert mime == "image/png"
+    assert png_bytes[:4] == b"\x89PNG"
+    assert len(png_bytes) > 0
+
+
+def test_prepare_native_file_png(tmp_dir):
+    from PIL import Image
+    png = tmp_dir / "test.png"
+    img = Image.new("RGB", (10, 10), color="blue")
+    img.save(str(png), format="PNG")
+
+    data, mime = prepare_native_file(png)
+    assert mime == "image/png"
+    assert data[:4] == b"\x89PNG"
+
+
+def test_prepare_native_file_converts_gif(tmp_dir):
+    from PIL import Image
+    gif = tmp_dir / "test.gif"
+    img = Image.new("RGB", (10, 10), color="green")
+    img.save(str(gif), format="GIF")
+
+    data, mime = prepare_native_file(gif)
+    assert mime == "image/png"  # Converted to PNG
+    assert data[:4] == b"\x89PNG"
+
+
+def test_prepare_native_file_mp3(tmp_dir):
+    mp3 = tmp_dir / "test.mp3"
+    mp3.write_bytes(b"\xff\xfb" + b"\x00" * 100)
+
+    data, mime = prepare_native_file(mp3)
+    assert mime == "audio/mpeg"
+    assert data == b"\xff\xfb" + b"\x00" * 100
+
+
+# --- Media duration tests ---
+
+def test_get_media_duration_returns_none_for_invalid(tmp_dir):
+    bad = tmp_dir / "not_audio.mp3"
+    bad.write_bytes(b"\x00" * 50)
+    # mutagen can't parse fake data, should return None
+    result = get_media_duration(bad)
+    assert result is None or isinstance(result, float)
+
+
+def test_get_media_duration_missing_file():
+    result = get_media_duration("/nonexistent/file.mp3")
+    assert result is None

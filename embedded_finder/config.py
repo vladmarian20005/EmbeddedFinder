@@ -16,11 +16,27 @@ DEFAULT_SEARCH_RESULTS = 10
 MAX_NATIVE_PDF_PAGES = 6
 
 # Multimodal extensions — these are embedded natively (raw bytes sent to model)
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
+# API only supports PNG and JPEG natively; other image formats are converted to PNG
+NATIVE_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+CONVERTIBLE_IMAGE_EXTENSIONS = {".gif", ".webp", ".bmp"}
+IMAGE_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS | CONVERTIBLE_IMAGE_EXTENSIONS
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
-VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
-NATIVE_EMBED_EXTENSIONS = IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
+VIDEO_EXTENSIONS = {".mp4", ".mov"}  # Only officially supported containers
+NATIVE_EMBED_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 # PDFs are conditionally native (≤6 pages) or text-extracted (>6 pages)
+
+# Media duration limits (seconds) — enforced by the Gemini API
+MAX_AUDIO_DURATION_SECONDS = 80
+MAX_VIDEO_DURATION_SECONDS = 120
+
+# Media chunking constants for long audio/video
+AUDIO_CHUNK_SECONDS = 60
+AUDIO_OVERLAP_SECONDS = 10
+VIDEO_CHUNK_SECONDS = 90
+VIDEO_OVERLAP_SECONDS = 15
+
+# Files API threshold — files larger than this are uploaded via the Files API
+FILES_API_THRESHOLD_MB = 20
 
 # MIME type mapping for multimodal embedding
 EXTENSION_MIME_MAP = {
@@ -29,7 +45,6 @@ EXTENSION_MIME_MAP = {
     ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
     ".flac": "audio/flac", ".m4a": "audio/mp4",
     ".mp4": "video/mp4", ".mov": "video/quicktime",
-    ".avi": "video/x-msvideo", ".mkv": "video/x-matroska", ".webm": "video/webm",
     ".pdf": "application/pdf",
 }
 
@@ -50,7 +65,7 @@ SUPPORTED_EXTENSIONS = {
     # Audio (native multimodal)
     ".mp3", ".wav", ".ogg", ".flac", ".m4a",
     # Video (native multimodal)
-    ".mp4", ".mov", ".avi", ".mkv", ".webm",
+    ".mp4", ".mov",
 }
 
 IGNORE_DIRS = {

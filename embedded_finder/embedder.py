@@ -1,9 +1,12 @@
 """Google Gemini embedding integration for EmbeddedFinder."""
 
+import logging
 import time
 from pathlib import Path
 
 from embedded_finder.config import DEFAULT_EMBEDDING_MODEL, get_api_key
+
+logger = logging.getLogger(__name__)
 
 # Lazy-loaded; patched in tests
 types = None
@@ -113,6 +116,24 @@ class Embedder:
         if not file_bytes:
             raise EmbeddingError(f"File is empty: {file_path}")
 
+        return self.embed_bytes(file_bytes, mime_type)
+
+    def embed_bytes(self, data: bytes, mime_type: str) -> list[float]:
+        """Embed raw bytes using multimodal embedding.
+
+        Same as embed_file but accepts bytes directly — needed for converted images
+        and other pre-processed content.
+
+        Args:
+            data: Raw bytes of the content.
+            mime_type: MIME type of the content.
+
+        Returns:
+            Embedding vector as a list of floats.
+        """
+        if not data:
+            raise EmbeddingError("Cannot embed empty data.")
+
         retries = 0
         max_retries = 3
         while retries <= max_retries:
@@ -121,7 +142,7 @@ class Embedder:
                 result = self._client.models.embed_content(
                     model=self._model,
                     contents=_types.Part.from_bytes(
-                        data=file_bytes,
+                        data=data,
                         mime_type=mime_type,
                     ),
                 )
@@ -137,3 +158,114 @@ class Embedder:
                     time.sleep(2 ** retries)
                 else:
                     raise EmbeddingError(f"Embedding file failed: {e}")
+
+    def embed_file_via_api(self, file_path: str | Path, mime_type: str) -> list[float]:
+        """Embed a file using the Google Files API for large files.
+
+        Uploads the file, waits for processing, embeds via file reference,
+        then cleans up.
+
+        Args:
+            file_path: Path to the file.
+            mime_type: MIME type of the file.
+
+        Returns:
+            Embedding vector as a list of floats.
+        """
+        path = Path(file_path)
+        if not path.exists():
+            raise EmbeddingError(f"File not found: {file_path}")
+
+        uploaded_file = None
+        try:
+            uploaded_file = self._client.files.upload(
+                file=str(path),
+                config={"mime_type": mime_type},
+            )
+
+            # Poll until the file is active
+            max_polls = 30
+            for _ in range(max_polls):
+                if uploaded_file.state == "ACTIVE":
+                    break
+                time.sleep(2)
+                uploaded_file = self._client.files.get(name=uploaded_file.name)
+            else:
+                raise EmbeddingError(
+                    f"File upload did not become ACTIVE after polling: {file_path}"
+                )
+
+            result = self._client.models.embed_content(
+                model=self._model,
+                contents=uploaded_file,
+            )
+            return list(result.embeddings[0].values)
+        except EmbeddingError:
+            raise
+        except Exception as e:
+            raise EmbeddingError(f"Files API embedding failed: {e}")
+        finally:
+            if uploaded_file is not None:
+                try:
+                    self._client.files.delete(name=uploaded_file.name)
+                except Exception:
+                    logger.warning("Failed to clean up uploaded file: %s", uploaded_file.name)
+
+    def embed_multipart(self, parts: list) -> list[float]:
+        """Embed multi-part content (e.g., text + image combined).
+
+        Args:
+            parts: List of content parts (strings, Part objects, etc.).
+
+        Returns:
+            Embedding vector as a list of floats.
+        """
+        if not parts:
+            raise EmbeddingError("Cannot embed empty parts list.")
+
+        _types = _get_types()
+        content = _types.Content(parts=parts)
+
+        retries = 0
+        max_retries = 3
+        while retries <= max_retries:
+            try:
+                result = self._client.models.embed_content(
+                    model=self._model,
+                    contents=content,
+                )
+                return list(result.embeddings[0].values)
+            except Exception as e:
+                error_str = str(e).lower()
+                if "rate" in error_str or "429" in error_str or "quota" in error_str:
+                    retries += 1
+                    if retries > max_retries:
+                        raise EmbeddingError(
+                            f"Rate limit exceeded after {max_retries} retries: {e}"
+                        )
+                    time.sleep(2 ** retries)
+                else:
+                    raise EmbeddingError(f"Multipart embedding failed: {e}")
+
+    @staticmethod
+    def average_embeddings(embeddings: list[list[float]]) -> list[float]:
+        """Compute element-wise average of multiple embedding vectors.
+
+        Args:
+            embeddings: List of embedding vectors (all same dimension).
+
+        Returns:
+            Averaged embedding vector.
+        """
+        if not embeddings:
+            raise EmbeddingError("Cannot average empty embeddings list.")
+
+        dim = len(embeddings[0])
+        n = len(embeddings)
+        avg = [0.0] * dim
+        for emb in embeddings:
+            for j in range(dim):
+                avg[j] += emb[j]
+        for j in range(dim):
+            avg[j] /= n
+        return avg

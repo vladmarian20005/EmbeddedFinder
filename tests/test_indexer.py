@@ -1,6 +1,6 @@
 """Tests for the indexing pipeline."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 
 from embedded_finder.indexer import Indexer, IndexStats
@@ -161,3 +161,51 @@ def test_index_native_file_skips_when_unchanged(mock_embedder, store, tmp_dir):
     stats2 = indexer.index_file(img)
     assert stats2.skipped == 1
     assert stats2.indexed == 0
+
+
+# --- Convertible image tests ---
+
+def test_index_gif_uses_embed_bytes(mock_embedder, store, tmp_dir):
+    from PIL import Image
+    mock_embedder.embed_bytes.return_value = [0.5] * 10
+
+    gif = tmp_dir / "anim.gif"
+    img = Image.new("RGB", (10, 10), color="red")
+    img.save(str(gif), format="GIF")
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    stats = indexer.index_file(gif)
+
+    assert stats.indexed == 1
+    # Should use embed_bytes (converted PNG), not embed_file
+    mock_embedder.embed_bytes.assert_called_once()
+    call_args = mock_embedder.embed_bytes.call_args
+    assert call_args[0][1] == "image/png"  # mime_type should be PNG
+
+
+def test_index_bmp_uses_embed_bytes(mock_embedder, store, tmp_dir):
+    from PIL import Image
+    mock_embedder.embed_bytes.return_value = [0.5] * 10
+
+    bmp = tmp_dir / "photo.bmp"
+    img = Image.new("RGB", (10, 10), color="blue")
+    img.save(str(bmp), format="BMP")
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    stats = indexer.index_file(bmp)
+
+    assert stats.indexed == 1
+    mock_embedder.embed_bytes.assert_called_once()
+
+
+# --- Streaming hash tests ---
+
+def test_compute_file_hash_matches_direct(mock_embedder, store, tmp_dir):
+    import hashlib
+    data = b"hello world" * 1000
+    f = tmp_dir / "test.bin"
+    f.write_bytes(data)
+
+    indexer = Indexer(embedder=mock_embedder, store=store)
+    h = indexer._compute_file_hash(f)
+    assert h == hashlib.sha256(data).hexdigest()

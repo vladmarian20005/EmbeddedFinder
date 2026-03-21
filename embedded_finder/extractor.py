@@ -1,17 +1,25 @@
 """File content extraction for EmbeddedFinder."""
 
+import io
 import json
+import logging
+import subprocess
+import tempfile
 from pathlib import Path
 
 from embedded_finder.config import (
     DEFAULT_CHUNK_MAX_TOKENS,
     EXTENSION_MIME_MAP,
+    NATIVE_IMAGE_EXTENSIONS,
+    CONVERTIBLE_IMAGE_EXTENSIONS,
     IMAGE_EXTENSIONS,
     AUDIO_EXTENSIONS,
     VIDEO_EXTENSIONS,
     NATIVE_EMBED_EXTENSIONS,
     MAX_NATIVE_PDF_PAGES,
 )
+
+logger = logging.getLogger(__name__)
 
 # Extensions treated as plain text (read directly)
 PLAIN_TEXT_EXTENSIONS = {
@@ -34,14 +42,129 @@ def get_mime_type(file_path: str | Path) -> str:
 def is_natively_embeddable(file_path: str | Path) -> bool:
     """Check if a file can be embedded natively (without text extraction).
 
-    Returns True for images, audio, video, and small PDFs (≤6 pages).
+    Returns True for images (including convertible formats), audio, video,
+    and small PDFs (<=6 pages).
     """
     ext = Path(file_path).suffix.lower()
     if ext in NATIVE_EMBED_EXTENSIONS:
         return True
+    if ext in CONVERTIBLE_IMAGE_EXTENSIONS:
+        return True
     if ext == ".pdf":
         return get_pdf_page_count(file_path) <= MAX_NATIVE_PDF_PAGES
     return False
+
+
+def convert_image_to_png(file_path: str | Path) -> tuple[bytes, str]:
+    """Convert an image file to PNG format using Pillow.
+
+    Args:
+        file_path: Path to the image file.
+
+    Returns:
+        Tuple of (png_bytes, "image/png").
+    """
+    from PIL import Image
+
+    with Image.open(str(file_path)) as img:
+        # Convert to RGB if necessary (e.g., RGBA, P mode)
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue(), "image/png"
+
+
+def prepare_native_file(file_path: str | Path) -> tuple[bytes, str]:
+    """Prepare a file for native embedding.
+
+    Converts unsupported image formats to PNG; reads raw bytes otherwise.
+
+    Args:
+        file_path: Path to the file.
+
+    Returns:
+        Tuple of (file_bytes, mime_type).
+    """
+    path = Path(file_path)
+    ext = path.suffix.lower()
+
+    if ext in CONVERTIBLE_IMAGE_EXTENSIONS:
+        return convert_image_to_png(path)
+
+    mime_type = get_mime_type(path)
+    return path.read_bytes(), mime_type
+
+
+def get_media_duration(file_path: str | Path) -> float | None:
+    """Get the duration of an audio or video file in seconds using mutagen.
+
+    Args:
+        file_path: Path to the media file.
+
+    Returns:
+        Duration in seconds, or None if duration cannot be determined.
+    """
+    try:
+        import mutagen
+        media = mutagen.File(str(file_path))
+        if media is not None and media.info is not None:
+            return media.info.length
+    except Exception:
+        pass
+    return None
+
+
+def chunk_media_file(
+    file_path: str | Path,
+    chunk_seconds: float,
+    overlap_seconds: float,
+) -> list[Path]:
+    """Split a media file into overlapping chunks using ffmpeg.
+
+    Args:
+        file_path: Path to the media file.
+        chunk_seconds: Duration of each chunk in seconds.
+        overlap_seconds: Overlap between consecutive chunks in seconds.
+
+    Returns:
+        List of paths to temporary chunk files. Caller is responsible for cleanup.
+    """
+    path = Path(file_path)
+    ext = path.suffix.lower()
+    duration = get_media_duration(path)
+    if duration is None:
+        logger.warning("Cannot determine duration for chunking: %s", path)
+        return []
+
+    chunk_dir = tempfile.mkdtemp(prefix="efind_chunks_")
+    chunks = []
+    start = 0.0
+    i = 0
+
+    while start < duration:
+        chunk_path = Path(chunk_dir) / f"chunk_{i}{ext}"
+        cmd = [
+            "ffmpeg", "-y", "-i", str(path),
+            "-ss", str(start),
+            "-t", str(chunk_seconds),
+            "-c", "copy",
+            str(chunk_path),
+        ]
+        try:
+            subprocess.run(
+                cmd, capture_output=True, check=True, timeout=120,
+            )
+            if chunk_path.exists() and chunk_path.stat().st_size > 0:
+                chunks.append(chunk_path)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+            logger.warning("ffmpeg chunking failed for %s chunk %d: %s", path, i, e)
+            break
+
+        start += chunk_seconds - overlap_seconds
+        i += 1
+
+    return chunks
 
 
 def get_pdf_page_count(file_path: str | Path) -> int:
