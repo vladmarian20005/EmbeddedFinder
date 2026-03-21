@@ -67,31 +67,77 @@ def _truncate_path(path: str, max_len: int = 60) -> str:
     return parts[0] + "/.../" + "/".join(parts[-2:])
 
 
+CODE_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".c", ".cpp", ".h", ".hpp",
+    ".go", ".rs", ".rb", ".php", ".swift", ".kt", ".scala", ".sh", ".bash",
+    ".zsh", ".lua", ".pl", ".ex", ".exs", ".r", ".m", ".sql",
+}
+TEXT_EXTENSIONS = {".txt", ".md", ".rst", ".csv", ".json", ".yaml", ".yml",
+                   ".toml", ".ini", ".cfg", ".conf", ".xml", ".html", ".css",
+                   ".scss", ".less", ".svg"}
+MEDIA_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
+                    ".mp3", ".wav", ".ogg", ".flac", ".m4a", ".mp4", ".mov"}
+
+# Keywords that suggest the user wants code/text, not media
+CODE_KEYWORDS = {
+    "function", "class", "def", "import", "return", "variable", "code",
+    "script", "module", "error", "bug", "api", "endpoint", "database",
+    "query", "algorithm", "loop", "array", "list", "dict", "string",
+    "python", "javascript", "typescript", "java", "rust", "go", "ruby",
+    "fibonacci", "sort", "search", "parse", "compile", "deploy", "test",
+    "config", "yaml", "json", "html", "css", "sql", "server", "client",
+    "http", "request", "response", "auth", "token", "middleware",
+}
+
+
+def _query_wants_code(query_words: set[str]) -> bool:
+    """Detect if a query is about code/text content rather than media."""
+    return bool(query_words & CODE_KEYWORDS)
+
+
 def rank_results(results: list[SearchResult], query: str) -> list[SearchResult]:
     """Re-rank results with combined scoring.
 
     Applies a boost based on:
     - Filename relevance (query words in filename)
-    - File extension preference (code files for code queries)
+    - File type relevance (code files boosted for code queries, media penalized)
+    - File path depth (shallower = more likely primary)
     """
     query_words = set(query.lower().split())
+    wants_code = _query_wants_code(query_words)
 
     scored = []
     for r in results:
         boost = 0.0
         name_lower = r.file_name.lower()
+        ext = r.file_extension.lower()
 
         # Boost if query words appear in filename
         for word in query_words:
             if word in name_lower:
-                boost += 0.02
+                boost += 0.03
+
+        # File type relevance: penalize media when query is code/text-oriented
+        if wants_code:
+            if ext in CODE_EXTENSIONS:
+                boost += 0.03
+            elif ext in TEXT_EXTENSIONS:
+                boost += 0.01
+            elif ext in MEDIA_EXTENSIONS:
+                boost -= 0.05
+
+        # Boost results that have actual text content matching query words
+        if r.snippet:
+            snippet_lower = r.snippet.lower()
+            matching_words = sum(1 for w in query_words if w in snippet_lower)
+            boost += matching_words * 0.02
 
         # Small boost for shorter file paths (less nested = more likely primary)
         depth = r.file_path.count("/")
         if depth < 5:
             boost += 0.005
 
-        new_score = min(r.score + boost, 1.0)
+        new_score = max(0.0, min(r.score + boost, 1.0))
         scored.append(SearchResult(
             file_path=r.file_path,
             file_name=r.file_name,

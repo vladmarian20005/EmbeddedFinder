@@ -2,6 +2,7 @@
 
 import getpass
 import os
+import readline  # noqa: F401 – enables line-editing for input()
 import sys
 import time
 import shutil
