@@ -7,7 +7,7 @@
   <p align="center">
     <a href="https://pypi.org/project/embedded-finder/"><img alt="PyPI" src="https://img.shields.io/pypi/v/embedded-finder"></a>
     <a href="https://pypi.org/project/embedded-finder/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/embedded-finder"></a>
-    <a href="https://github.com/vladmarian20005/EmbeddedFinder/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/vladmarian20005/EmbeddedFinder"></a>
+    <a href="https://github.com/vladmarian20005/EmbeddedFinder/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
   </p>
 </p>
 
