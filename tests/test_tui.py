@@ -46,11 +46,6 @@ def test_parse_slash_command_case_insensitive():
     assert cmd == "help"
 
 
-def test_parse_web_with_port():
-    cmd, args = _parse_command("/web 3000")
-    assert cmd == "web"
-    assert args == "3000"
-
 
 # ── Formatting helpers ───────────────────────────────────────────────────────
 

@@ -299,7 +299,6 @@ def print_help():
         ("/key show", "Show full unmasked key"),
     ])
     section("Other", [
-        ("/web [port]", "Start web UI (default: 8080)"),
         ("/help", "Show this help"),
         ("/quit  or  Ctrl+C", "Exit"),
     ])
@@ -580,17 +579,6 @@ def _handle_watch(indexer, path: str):
         console.print("\n  [dim]Stopped watching.[/dim]\n")
 
 
-def _handle_web(port: int = 8080):
-    """Handle /web command."""
-    from embedded_finder.web.app import create_app
-    console.print(f"\n  [dim]Starting web UI at[/dim] [{SECONDARY}]http://127.0.0.1:{port}[/{SECONDARY}]")
-    console.print("  [dim]Press Ctrl+C to stop[/dim]\n")
-    app = create_app()
-    try:
-        app.run(host="127.0.0.1", port=port, debug=False)
-    except KeyboardInterrupt:
-        console.print("\n  [dim]Web server stopped.[/dim]\n")
-
 
 def _handle_key(args: str):
     """Handle /key command and subcommands."""
@@ -752,9 +740,6 @@ def run_interactive(api_key: str | None = None):
                     console.print(f"  [red]Usage:[/red] /watch <path>")
                 else:
                     _handle_watch(indexer, args)
-            elif cmd == "web":
-                port = int(args) if args.strip().isdigit() else 8080
-                _handle_web(port)
             elif cmd == "key":
                 _handle_key(args)
             else:

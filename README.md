@@ -51,7 +51,6 @@ It works on everything: source code, config files, PDFs, Word documents, images,
 - **Incremental indexing** — content-hashed, only re-processes changed files
 - **Batch embedding** — groups chunks into minimal API calls for fast indexing
 - **File watching** — auto-reindex when files change on disk
-- **Web UI** — browser-based search interface
 - **One-shot CLI** — scriptable commands for CI/automation
 - **Smart ranking** — filename matching, file type relevance, and content-aware scoring
 
@@ -128,7 +127,6 @@ Results show similarity scores, file types, paths, and content snippets — colo
 | `/status`           | Show index statistics                      |
 | `/clear`            | Clear the entire index                     |
 | `/watch <path>`     | Watch a directory and auto-reindex         |
-| `/web [port]`       | Start the web UI (default: 8080)           |
 | `/key`              | Show current API key info                  |
 | `/key set`          | Set or change your API key                 |
 | `/key delete`       | Remove saved API key                       |
@@ -168,30 +166,16 @@ efind status
 # Clear the index
 efind clear
 
-# Start web UI
-efind web --port 3000
-
 # Check version
 efind --version
 ```
-
-### Web UI
-
-```bash
-efind web
-# → http://127.0.0.1:8080
-```
-
-Or from interactive mode: `/web 3000`
-
-Dark-themed single-page app with real-time search, score visualization, and the same search backend as the CLI.
 
 ## Supported file types
 
 | Category | Extensions |
 | -------- | ---------- |
 | **Code** | `.py` `.js` `.ts` `.jsx` `.tsx` `.java` `.c` `.cpp` `.h` `.hpp` `.go` `.rs` `.rb` `.php` `.swift` `.kt` `.scala` `.sh` `.bash` `.zsh` `.lua` `.pl` `.ex` `.exs` `.r` `.m` `.sql` |
-| **Web** | `.html` `.css` `.scss` `.less` `.xml` `.svg` |
+| **Markup** | `.html` `.css` `.scss` `.less` `.xml` `.svg` |
 | **Config** | `.json` `.yaml` `.yml` `.toml` `.ini` `.cfg` `.conf` |
 | **Text** | `.txt` `.md` `.rst` `.csv` |
 | **Documents** | `.pdf` `.docx` |
@@ -251,9 +235,7 @@ embedded_finder/
 ├── search.py         # Query embedding + nearest-neighbor search
 ├── ranker.py         # Result ranking, dedup, and formatting
 ├── rate_limiter.py   # Token bucket rate limiter
-├── watcher.py        # Filesystem watcher (watchdog)
-└── web/
-    └── app.py        # Flask web UI
+└── watcher.py        # Filesystem watcher (watchdog)
 ```
 
 ## Development
