@@ -1,6 +1,15 @@
-# EmbeddedFinder
-
-Semantic file search for your local filesystem. Ask questions in plain English and find the files you need — across code, documents, images, audio, and video.
+<p align="center">
+  <h1 align="center">EmbeddedFinder</h1>
+  <p align="center">
+    <strong>Semantic file search for your local filesystem.</strong><br>
+    Ask questions in plain English — find what you need across code, documents, images, audio, and video.
+  </p>
+  <p align="center">
+    <a href="https://pypi.org/project/embedded-finder/"><img alt="PyPI" src="https://img.shields.io/pypi/v/embedded-finder"></a>
+    <a href="https://pypi.org/project/embedded-finder/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/embedded-finder"></a>
+    <a href="https://github.com/vladmarian20005/EmbeddedFinder/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/vladmarian20005/EmbeddedFinder"></a>
+  </p>
+</p>
 
 Powered by [Google Gemini Embedding 2](https://ai.google.dev/gemini-api/docs/embeddings) and [ChromaDB](https://www.trychroma.com/).
 
@@ -27,25 +36,34 @@ Powered by [Google Gemini Embedding 2](https://ai.google.dev/gemini-api/docs/emb
         ▸ class AuthMiddleware: def process_request(self, req)...
 ```
 
+## Why EmbeddedFinder?
+
+Traditional file search (`grep`, `find`, `ag`) matches exact text. EmbeddedFinder understands *meaning*. Search for "error handling in payments" and find files about exception catching in billing code — even if those exact words never appear.
+
+It works on everything: source code, config files, PDFs, Word documents, images, audio, and video — all in one index.
+
 ## Features
 
-- **Natural language search** — describe what you're looking for, not just keywords
-- **Multimodal** — indexes code, text, PDFs, DOCX, images, audio, and video files
-- **Interactive TUI** — Claude Code-style REPL with slash commands, spinners, and color-coded results
-- **Incremental indexing** — only re-processes changed files
-- **File watching** — automatically re-indexes when files change on disk
-- **Web UI** — browser-based search interface via Flask
+- **Natural language search** — describe what you're looking for, not keywords
+- **Multimodal indexing** — code, text, PDFs, DOCX, images, audio, and video files
+- **Interactive TUI** — rich terminal UI with slash commands, progress bars, and color-coded results
+- **First-run setup wizard** — guided onboarding with API key validation
+- **Incremental indexing** — content-hashed, only re-processes changed files
+- **Batch embedding** — groups chunks into minimal API calls for fast indexing
+- **File watching** — auto-reindex when files change on disk
+- **Web UI** — browser-based search interface
 - **One-shot CLI** — scriptable commands for CI/automation
+- **Smart ranking** — filename matching, file type relevance, and content-aware scoring
 
-## Installation
+## Quick start
 
-### From PyPI (recommended)
+### Install
 
 ```bash
 pip install embedded-finder
 ```
 
-### From source
+Or from source:
 
 ```bash
 git clone https://github.com/vladmarian20005/EmbeddedFinder.git
@@ -53,23 +71,21 @@ cd EmbeddedFinder
 pip install .
 ```
 
-### For development
+### Run
 
 ```bash
-git clone https://github.com/vladmarian20005/EmbeddedFinder.git
-cd EmbeddedFinder
-pip install -e ".[dev]"
+efind
 ```
 
-## Setup
+On first launch, a setup wizard walks you through:
 
-### 1. Get a Google API key
+1. Enter your [Google AI API key](https://aistudio.google.com/apikey) (free tier available)
+2. The key is validated and saved securely to `~/.config/embeddedfinder/config.json`
+3. Optionally index a directory right away
 
-EmbeddedFinder uses the Gemini Embedding API. Get a free key at [Google AI Studio](https://aistudio.google.com/apikey).
+That's it — start searching.
 
-### 2. Set the API key
-
-Pick one:
+### Already have a key?
 
 ```bash
 # Option A: environment variable
@@ -77,66 +93,61 @@ export GOOGLE_API_KEY=your-key-here
 
 # Option B: .env file in your project root
 echo "GOOGLE_API_KEY=your-key-here" > .env
-```
 
-### 3. Index your files
-
-```bash
-# Interactive mode (launches the TUI)
+# Option C: set it interactively
 efind
-
-# Then type:
-#   /index ./my-project
-
-# Or one-shot from the command line:
-efind index ./my-project
+# then type: /key set
 ```
-
-That's it. You're ready to search.
 
 ## Usage
 
 ### Interactive mode (default)
 
-Run `efind` with no arguments to enter the interactive REPL:
-
 ```bash
 efind
 ```
 
-Then type natural language queries at the `❯` prompt:
+Type natural language queries at the `❯` prompt:
 
 ```
 ❯ database migration scripts
 ❯ files that handle image resizing
 ❯ error handling in the payment module
+❯ screenshots of the dashboard
+❯ audio files with speech
 ```
 
-#### Slash commands
+Results show similarity scores, file types, paths, and content snippets — color-coded by relevance.
 
-| Command            | Description                             |
-| ------------------ | --------------------------------------- |
-| `/index <path>`    | Index a directory                       |
-| `/reindex <path>`  | Re-index only changed files             |
-| `/status`          | Show index statistics                   |
-| `/clear`           | Clear the entire index                  |
-| `/watch <path>`    | Watch a directory and auto-reindex      |
-| `/web [port]`      | Start the web UI (default: 8080)        |
-| `/help`            | Show available commands                 |
-| `/quit` or `Ctrl+C`| Exit                                   |
+### Slash commands
 
-### One-shot CLI commands
+| Command             | Description                                |
+| ------------------- | ------------------------------------------ |
+| `/index <path>`     | Index a directory                          |
+| `/reindex <path>`   | Re-index only changed files                |
+| `/status`           | Show index statistics                      |
+| `/clear`            | Clear the entire index                     |
+| `/watch <path>`     | Watch a directory and auto-reindex         |
+| `/web [port]`       | Start the web UI (default: 8080)           |
+| `/key`              | Show current API key info                  |
+| `/key set`          | Set or change your API key                 |
+| `/key delete`       | Remove saved API key                       |
+| `/key show`         | Reveal the full API key                    |
+| `/help`             | Show available commands                    |
+| `/quit` or `Ctrl+C` | Exit                                      |
 
-For scripting or one-off use:
+### CLI commands
+
+For scripting and one-off use:
 
 ```bash
 # Index a directory
 efind index ./src
 
-# Index only specific file types
+# Index specific file types only
 efind index ./src -e .py -e .ts
 
-# Search from the command line
+# Search
 efind search "authentication middleware"
 
 # Search with options
@@ -145,7 +156,7 @@ efind search "config parsing" --top 5 --min-score 0.7
 # Plain text output (no colors, good for piping)
 efind search "database models" --plain
 
-# Re-index changed files
+# Re-index changed files only
 efind reindex ./src
 
 # Watch for changes
@@ -171,74 +182,86 @@ efind web
 # → http://127.0.0.1:8080
 ```
 
-Or from interactive mode:
+Or from interactive mode: `/web 3000`
 
-```
-❯ /web 3000
-```
-
-Provides a browser-based search interface with the same search backend.
+Dark-themed single-page app with real-time search, score visualization, and the same search backend as the CLI.
 
 ## Supported file types
 
-### Code & text
-`.py` `.js` `.ts` `.jsx` `.tsx` `.java` `.c` `.cpp` `.h` `.hpp` `.go` `.rs` `.rb` `.php` `.swift` `.kt` `.scala` `.sh` `.bash` `.zsh` `.lua` `.pl` `.ex` `.exs` `.r` `.m` `.sql` `.html` `.css` `.scss` `.less` `.xml` `.svg` `.json` `.csv` `.yaml` `.yml` `.toml` `.ini` `.cfg` `.conf` `.txt` `.md` `.rst`
+| Category | Extensions |
+| -------- | ---------- |
+| **Code** | `.py` `.js` `.ts` `.jsx` `.tsx` `.java` `.c` `.cpp` `.h` `.hpp` `.go` `.rs` `.rb` `.php` `.swift` `.kt` `.scala` `.sh` `.bash` `.zsh` `.lua` `.pl` `.ex` `.exs` `.r` `.m` `.sql` |
+| **Web** | `.html` `.css` `.scss` `.less` `.xml` `.svg` |
+| **Config** | `.json` `.yaml` `.yml` `.toml` `.ini` `.cfg` `.conf` |
+| **Text** | `.txt` `.md` `.rst` `.csv` |
+| **Documents** | `.pdf` `.docx` |
+| **Images** | `.png` `.jpg` `.jpeg` `.gif` `.webp` `.bmp` |
+| **Audio** | `.mp3` `.wav` `.ogg` `.flac` `.m4a` |
+| **Video** | `.mp4` `.mov` `.avi` `.mkv` `.webm` |
 
-### Documents
-`.pdf` (text-extracted for >6 pages, natively embedded for ≤6 pages) `.docx`
+Images, audio, and video are embedded natively using Gemini's multimodal capabilities — no transcription or OCR needed.
 
-### Images (native multimodal embedding)
-`.png` `.jpg` `.jpeg` `.gif` `.webp` `.bmp`
-
-### Audio (native multimodal embedding)
-`.mp3` `.wav` `.ogg` `.flac` `.m4a`
-
-### Video (native multimodal embedding)
-`.mp4` `.mov` `.avi` `.mkv` `.webm`
+PDFs with 6 or fewer pages are embedded natively; larger PDFs use text extraction for efficiency.
 
 ## How it works
 
-1. **Crawl** — recursively walks a directory, skipping `.git`, `node_modules`, `__pycache__`, and other common noise directories
-2. **Extract** — reads file content: text extraction for code/docs, raw bytes for multimodal files (images, audio, video)
-3. **Chunk** — splits large text files into overlapping chunks (~2000 tokens each) to stay within embedding limits
-4. **Embed** — sends content to the Gemini Embedding API (`gemini-embedding-2-preview`, 3072 dimensions) to produce vector representations
-5. **Store** — saves embeddings in a local ChromaDB database (`.embeddedfinder/db`)
-6. **Search** — embeds your query, performs nearest-neighbor search in ChromaDB, deduplicates by file, and ranks results with a filename-match boost
+```
+ Directory          EmbeddedFinder                    ChromaDB
+ ─────────     ─────────────────────────     ─────────────────────
 
-Files are fingerprinted by content hash, so re-indexing only processes files that have actually changed.
+  files/ ──→  1. Crawl  (skip .git, etc.)
+           ──→  2. Extract  (text / bytes)
+           ──→  3. Chunk   (~2000 tokens)
+           ──→  4. Hash    (SHA-256 dedup)
+           ──→  5. Embed   (Gemini API)   ──→  Store vectors
+
+  query  ──→  6. Embed query              ──→  Nearest-neighbor
+           ──→  7. Deduplicate by file             search
+           ──→  8. Re-rank & boost        ──→  Results
+```
+
+- **Content hashing** — files are fingerprinted with SHA-256; re-indexing skips anything unchanged
+- **Batch embedding** — text chunks are grouped into batches (up to 100 per API call) for throughput
+- **Rate limiting** — built-in token bucket limiter respects Gemini API quotas
+- **Parallel processing** — multi-threaded extraction and embedding with up to 4 workers
+- **Smart ranking** — results are boosted by filename match, file type relevance to query, content overlap, and path depth
 
 ## Configuration
 
-All configuration is via environment variables:
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `GOOGLE_API_KEY` | — | Google AI API key (required) |
+| `EMBEDDEDFINDER_DB_DIR` | `.embeddedfinder/db` | Path to the ChromaDB database |
 
-| Variable               | Default                        | Description                    |
-| ---------------------- | ------------------------------ | ------------------------------ |
-| `GOOGLE_API_KEY`       | —                              | Google AI API key (required)   |
-| `EMBEDDEDFINDER_DB_DIR`| `.embeddedfinder/db`           | Path to the ChromaDB database  |
+The API key can also be stored via the setup wizard or `/key set`, which saves it to `~/.config/embeddedfinder/config.json` with owner-only permissions.
 
 ## Project structure
 
 ```
 embedded_finder/
-├── cli.py          # Click CLI — subcommands + TUI launcher
-├── tui.py          # Interactive Rich-based REPL
-├── config.py       # Settings, supported extensions, env vars
-├── crawler.py      # Recursive file discovery
-├── extractor.py    # Text extraction, chunking, MIME detection
-├── embedder.py     # Gemini Embedding API client
-├── store.py        # ChromaDB vector store
-├── indexer.py      # Orchestrates crawl → extract → embed → store
-├── search.py       # Query embedding + nearest-neighbor search
-├── ranker.py       # Result ranking and formatting
-├── watcher.py      # Filesystem watcher (watchdog)
+├── cli.py            # Click CLI — subcommands + TUI launcher
+├── tui.py            # Interactive Rich-based REPL
+├── config.py         # Settings, supported extensions, env vars
+├── config_store.py   # Persistent config file management
+├── crawler.py        # Recursive file discovery
+├── extractor.py      # Text extraction, chunking, MIME detection
+├── embedder.py       # Gemini Embedding API client + batching
+├── store.py          # ChromaDB vector store
+├── indexer.py        # Orchestrates crawl → extract → embed → store
+├── search.py         # Query embedding + nearest-neighbor search
+├── ranker.py         # Result ranking, dedup, and formatting
+├── rate_limiter.py   # Token bucket rate limiter
+├── watcher.py        # Filesystem watcher (watchdog)
 └── web/
-    └── app.py      # Flask web UI
+    └── app.py        # Flask web UI
 ```
 
 ## Development
 
 ```bash
-# Install dev dependencies
+# Clone and install with dev dependencies
+git clone https://github.com/vladmarian20005/EmbeddedFinder.git
+cd EmbeddedFinder
 pip install -e ".[dev]"
 
 # Run tests
@@ -247,6 +270,16 @@ pytest
 # Run tests with coverage
 pytest --cov=embedded_finder
 ```
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a pull request
 
 ## License
 
