@@ -8,6 +8,7 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers import Observer
 
 from embedded_finder.config import SUPPORTED_EXTENSIONS, IGNORE_DIRS
+from embedded_finder.crawler import _should_ignore
 from embedded_finder.indexer import Indexer
 
 logger = logging.getLogger(__name__)
@@ -26,9 +27,9 @@ class _IndexHandler(FileSystemEventHandler):
             return False
         if p.suffix.lower() not in SUPPORTED_EXTENSIONS:
             return False
-        # Skip files in ignored directories
+        # Skip files in ignored directories (reuse crawler's fnmatch-based logic)
         for part in p.parts:
-            if part in IGNORE_DIRS or part.startswith("."):
+            if _should_ignore(part, IGNORE_DIRS):
                 return False
         return True
 

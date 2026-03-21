@@ -180,7 +180,7 @@ def test_is_natively_embeddable_text_file(tmp_dir):
 
 
 def test_is_natively_embeddable_small_pdf(tmp_dir):
-    from PyPDF2 import PdfWriter
+    from pypdf import PdfWriter
     pdf = tmp_dir / "small.pdf"
     writer = PdfWriter()
     writer.add_blank_page(width=72, height=72)
@@ -190,7 +190,7 @@ def test_is_natively_embeddable_small_pdf(tmp_dir):
 
 
 def test_get_pdf_page_count(tmp_dir):
-    from PyPDF2 import PdfWriter
+    from pypdf import PdfWriter
     pdf = tmp_dir / "test.pdf"
     writer = PdfWriter()
     for _ in range(3):

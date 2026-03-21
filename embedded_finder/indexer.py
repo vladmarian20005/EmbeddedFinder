@@ -207,7 +207,7 @@ class Indexer:
             file_offsets.append((start, len(pf.chunks)))
 
         # Batch API call across all files (embed_batch handles internal batching)
-        all_embeddings = self._embedder.embed_batch(all_chunks)
+        all_embeddings = self._embedder.embed_batch(all_chunks, task_type="RETRIEVAL_DOCUMENT")
 
         # Distribute embeddings back to files and store
         for pi, pf in enumerate(prepared):
@@ -343,14 +343,14 @@ class Indexer:
         if file_info.size_bytes > FILES_API_THRESHOLD_MB * 1024 * 1024:
             # For convertible images, we already have PNG bytes — use embed_bytes
             if ext in CONVERTIBLE_IMAGE_EXTENSIONS:
-                embedding = self._embedder.embed_bytes(file_bytes, mime_type)
+                embedding = self._embedder.embed_bytes(file_bytes, mime_type, task_type="RETRIEVAL_DOCUMENT")
             else:
-                embedding = self._embedder.embed_file_via_api(file_info.path, mime_type)
+                embedding = self._embedder.embed_file_via_api(file_info.path, mime_type, task_type="RETRIEVAL_DOCUMENT")
         elif ext in CONVERTIBLE_IMAGE_EXTENSIONS:
             # Converted images must use embed_bytes (bytes are PNG, not original format)
-            embedding = self._embedder.embed_bytes(file_bytes, mime_type)
+            embedding = self._embedder.embed_bytes(file_bytes, mime_type, task_type="RETRIEVAL_DOCUMENT")
         else:
-            embedding = self._embedder.embed_file(file_info.path, mime_type)
+            embedding = self._embedder.embed_file(file_info.path, mime_type, task_type="RETRIEVAL_DOCUMENT")
 
         # For native embeds, store file name as the document text (for search snippet)
         display_text = f"[{file_info.extension.upper().lstrip('.')}] {file_info.name}"
@@ -404,7 +404,7 @@ class Indexer:
             embeddings = []
             for chunk_path in chunks:
                 mime_type = get_mime_type(chunk_path)
-                emb = self._embedder.embed_file(chunk_path, mime_type)
+                emb = self._embedder.embed_file(chunk_path, mime_type, task_type="RETRIEVAL_DOCUMENT")
                 embeddings.append(emb)
 
             ids = []
@@ -479,7 +479,7 @@ class Indexer:
             return
 
         # Embedding call runs concurrently — rate limiter handles throttling
-        embeddings = self._embedder.embed_batch(chunks)
+        embeddings = self._embedder.embed_batch(chunks, task_type="RETRIEVAL_DOCUMENT")
 
         ids = [f"{file_path_str}::chunk_{i}" for i in range(len(chunks))]
         metadatas = [

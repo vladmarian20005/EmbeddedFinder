@@ -6,6 +6,7 @@ import click
 
 from embedded_finder import __version__
 from embedded_finder.config import get_api_key, get_db_dir, DEFAULT_RATE_LIMIT_TPM, DEFAULT_RATE_LIMIT_RPM
+from embedded_finder.utils import format_eta, format_size_long
 
 
 @click.group(invoke_without_command=True)
@@ -53,7 +54,7 @@ def index(path, extensions):
             elapsed = _time.monotonic() - _start
             if done > 0 and done < total:
                 eta = elapsed / done * (total - done)
-                eta_str = f" (ETA {_format_eta(eta)})"
+                eta_str = f" (ETA {format_eta(eta)})"
             else:
                 eta_str = ""
             click.echo(f"  [{done}/{total}] {file_info.name}{eta_str}", nl=True)
@@ -61,7 +62,7 @@ def index(path, extensions):
         stats = indexer.index_directory(path, extensions=ext_set, on_progress=on_progress)
         elapsed = _time.monotonic() - _start
 
-        click.echo(f"\nDone in {_format_eta(elapsed)}! {stats.indexed} files indexed, "
+        click.echo(f"\nDone in {format_eta(elapsed)}! {stats.indexed} files indexed, "
                     f"{stats.skipped} skipped, {stats.errors} errors, "
                     f"{stats.chunks_created} chunks created.")
 
@@ -98,7 +99,7 @@ def search(query, top, min_score, plain):
         engine = SearchEngine(embedder=embedder, store=store)
 
         results = engine.search(query, n_results=top, min_score=min_score)
-        results = rank_results(results, query)
+        results = rank_results(results, query)[:top]
 
         if not results:
             click.echo("No results found.")
@@ -109,7 +110,7 @@ def search(query, top, min_score, plain):
             for i, r in enumerate(results, 1):
                 score_pct = f"{r.score * 100:.1f}%"
                 click.echo(f"  {i}. [{score_pct}] {r.file_path}")
-                click.echo(f"     {r.file_name} ({r.file_extension}, {_format_size(r.file_size)})")
+                click.echo(f"     {r.file_name} ({r.file_extension}, {format_size_long(r.file_size)})")
                 if r.snippet:
                     snippet = r.snippet.replace("\n", " ")[:120]
                     click.echo(f"     > {snippet}...")
@@ -223,29 +224,6 @@ def reindex(path):
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-
-
-def _format_eta(seconds: float) -> str:
-    """Format seconds into a human-readable ETA string."""
-    if seconds < 60:
-        return f"{int(seconds)}s"
-    elif seconds < 3600:
-        m, s = divmod(int(seconds), 60)
-        return f"{m}m {s}s"
-    else:
-        h, rem = divmod(int(seconds), 3600)
-        m = rem // 60
-        return f"{h}h {m}m"
-
-
-def _format_size(size_bytes: int) -> str:
-    """Format file size in human-readable form."""
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes / 1024:.1f} KB"
-    else:
-        return f"{size_bytes / (1024 * 1024):.1f} MB"
 
 
 if __name__ == "__main__":

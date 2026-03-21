@@ -26,7 +26,7 @@ def indexer(mock_embedder, store):
 
 def test_index_directory(indexer, sample_files, mock_embedder):
     # Make embed_batch return one embedding per input text
-    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 10] * len(texts)
 
     stats = indexer.index_directory(sample_files)
     assert stats.total_files > 0
@@ -35,7 +35,7 @@ def test_index_directory(indexer, sample_files, mock_embedder):
 
 
 def test_index_skips_already_indexed(indexer, sample_files, mock_embedder):
-    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 10] * len(texts)
 
     stats1 = indexer.index_directory(sample_files)
     assert stats1.indexed > 0
@@ -55,7 +55,7 @@ def test_index_tracks_errors(indexer, sample_files, mock_embedder):
 
 
 def test_index_single_file(indexer, sample_files, mock_embedder):
-    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 10] * len(texts)
 
     txt_file = sample_files / "hello.txt"
     stats = indexer.index_file(txt_file)
@@ -74,7 +74,7 @@ def test_index_stats_defaults():
 
 
 def test_on_progress_callback(indexer, sample_files, mock_embedder):
-    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 10] * len(texts)
     progress_calls = []
 
     def on_progress(file_info, stats):
@@ -87,7 +87,7 @@ def test_on_progress_callback(indexer, sample_files, mock_embedder):
 # --- Multimodal indexing tests ---
 
 def test_index_image_uses_native_embed(mock_embedder, store, tmp_dir):
-    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 10] * len(texts)
     mock_embedder.embed_file.return_value = [0.2] * 10
 
     # Create an image file
@@ -104,7 +104,7 @@ def test_index_image_uses_native_embed(mock_embedder, store, tmp_dir):
 
 
 def test_index_text_file_uses_text_embed(mock_embedder, store, tmp_dir):
-    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 10] * len(texts)
+    mock_embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 10] * len(texts)
 
     txt = tmp_dir / "code.py"
     txt.write_text("def hello(): return 42")
@@ -118,7 +118,7 @@ def test_index_text_file_uses_text_embed(mock_embedder, store, tmp_dir):
 
 
 def test_index_small_pdf_uses_native_embed(mock_embedder, store, tmp_dir):
-    from PyPDF2 import PdfWriter
+    from pypdf import PdfWriter
     mock_embedder.embed_file.return_value = [0.3] * 10
 
     pdf = tmp_dir / "small.pdf"

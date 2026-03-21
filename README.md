@@ -209,6 +209,7 @@ PDFs with 6 or fewer pages are embedded natively; larger PDFs use text extractio
 - **Rate limiting** — built-in token bucket limiter respects Gemini API quotas
 - **Parallel processing** — multi-threaded extraction and embedding with up to 4 workers
 - **Smart ranking** — results are boosted by filename match, file type relevance to query, content overlap, and path depth
+- **Directory filtering** — hidden directories (starting with `.`) and common non-content directories (`node_modules`, `__pycache__`, `.venv`, `dist`, `build`, etc.) are automatically skipped during crawling
 
 ## Configuration
 

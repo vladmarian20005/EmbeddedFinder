@@ -22,6 +22,7 @@ from embedded_finder.config import (
     get_api_key, get_db_dir, SUPPORTED_EXTENSIONS,
     IMAGE_EXTENSIONS, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS,
 )
+from embedded_finder.utils import format_size, format_eta
 
 console = Console()
 
@@ -71,13 +72,7 @@ def _score_bar(score: float, width: int = 20) -> Text:
     return bar
 
 
-def _format_size(size_bytes: int) -> str:
-    if size_bytes < 1024:
-        return f"{size_bytes}B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes / 1024:.0f}K"
-    else:
-        return f"{size_bytes / (1024 * 1024):.1f}M"
+_format_size = format_size
 
 
 def _type_badge(ext: str) -> Text:
@@ -387,17 +382,7 @@ def _search_with_spinner(engine, query: str, n_results: int, min_score: float):
     return result_holder[0], elapsed
 
 
-def _format_eta(seconds: float) -> str:
-    """Format seconds into a human-readable ETA string."""
-    if seconds < 60:
-        return f"{int(seconds)}s"
-    elif seconds < 3600:
-        m, s = divmod(int(seconds), 60)
-        return f"{m}m {s}s"
-    else:
-        h, rem = divmod(int(seconds), 3600)
-        m = rem // 60
-        return f"{h}h {m}m"
+_format_eta = format_eta
 
 
 def _index_with_progress(indexer, path: str, extensions=None):
@@ -474,7 +459,7 @@ def _handle_search(engine, query: str, n_results: int = 10, min_score: float = 0
     from embedded_finder.ranker import rank_results
 
     results, elapsed = _search_with_spinner(engine, query, n_results, min_score)
-    results = rank_results(results, query)
+    results = rank_results(results, query)[:n_results]
     print_results(results, query, elapsed)
 
 

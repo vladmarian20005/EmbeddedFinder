@@ -75,9 +75,12 @@ def test_search_min_score_filter(engine):
     assert results[0].file_path == "/a.txt"
 
 
-def test_search_n_results_limit(engine):
+def test_search_n_results_controls_retrieval_window(engine):
+    """search() returns all deduped candidates; callers truncate after ranking."""
     results = engine.search("hello", n_results=1)
-    assert len(results) == 1
+    # n_results controls the ChromaDB retrieval window (n_results * 5),
+    # but all deduped results are returned for the ranker to re-rank.
+    assert len(results) >= 1
 
 
 def test_search_deduplicates_files(mock_embedder):

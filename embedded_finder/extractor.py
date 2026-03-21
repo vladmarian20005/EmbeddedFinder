@@ -170,7 +170,7 @@ def chunk_media_file(
 def get_pdf_page_count(file_path: str | Path) -> int:
     """Get the number of pages in a PDF file."""
     try:
-        from PyPDF2 import PdfReader
+        from pypdf import PdfReader
         reader = PdfReader(str(file_path))
         return len(reader.pages)
     except Exception:
@@ -217,7 +217,7 @@ def _extract_plain_text(path: Path) -> str:
 
 def _extract_pdf(path: Path) -> str:
     """Extract text from a PDF file."""
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     reader = PdfReader(str(path))
     pages = []

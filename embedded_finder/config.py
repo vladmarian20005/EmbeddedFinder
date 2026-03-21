@@ -3,12 +3,9 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()
+_dotenv_loaded = False
 
 DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2-preview"
-DEFAULT_EMBEDDING_DIMENSIONS = 3072
 DEFAULT_DB_DIR = ".embeddedfinder/db"
 DEFAULT_MAX_FILE_SIZE_MB = 50
 DEFAULT_CHUNK_MAX_TOKENS = 2000
@@ -20,6 +17,8 @@ MAX_NATIVE_PDF_PAGES = 6
 NATIVE_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 CONVERTIBLE_IMAGE_EXTENSIONS = {".gif", ".webp", ".bmp"}
 IMAGE_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS | CONVERTIBLE_IMAGE_EXTENSIONS
+# Docs explicitly list MP3/WAV; ogg/flac/m4a are included optimistically
+# (API may reject them — errors are handled gracefully by the indexer)
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
 VIDEO_EXTENSIONS = {".mp4", ".mov"}  # Only officially supported containers
 NATIVE_EMBED_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS | AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
@@ -88,6 +87,11 @@ IGNORE_DIRS = {
 
 def get_api_key() -> str | None:
     """Get the Google API key from environment or config file."""
+    global _dotenv_loaded
+    if not _dotenv_loaded:
+        from dotenv import load_dotenv
+        load_dotenv()
+        _dotenv_loaded = True
     env_key = os.environ.get("GOOGLE_API_KEY")
     if env_key:
         return env_key
