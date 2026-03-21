@@ -33,6 +33,8 @@ def sample_files(tmp_dir):
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    """Ensure tests don't leak environment variables."""
+    """Ensure tests don't leak environment variables or config file state."""
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.delenv("EMBEDDEDFINDER_DB_DIR", raising=False)
+    monkeypatch.setattr("embedded_finder.config_store.get_config_path",
+                        lambda: Path(tempfile.mkdtemp()) / "config.json")

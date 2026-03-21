@@ -54,16 +54,16 @@ def test_parse_web_with_port():
 
 # ── Formatting helpers ───────────────────────────────────────────────────────
 
-def test_score_style_green():
-    assert _score_style(0.90) == "green"
+def test_score_style_high():
+    assert _score_style(0.95) == "bold green"
 
 
-def test_score_style_yellow():
-    assert _score_style(0.75) == "yellow"
+def test_score_style_good():
+    assert _score_style(0.80) == "green"
 
 
-def test_score_style_red():
-    assert _score_style(0.30) == "red"
+def test_score_style_low():
+    assert _score_style(0.30) == "dim"
 
 
 def test_format_size_bytes():

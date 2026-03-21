@@ -30,7 +30,7 @@ def index(path, extensions):
 
     api_key = get_api_key()
     if not api_key:
-        click.echo("Error: GOOGLE_API_KEY environment variable not set.", err=True)
+        click.echo("Error: No API key found. Set GOOGLE_API_KEY env var or run 'efind' to configure.", err=True)
         sys.exit(1)
 
     ext_set = set(extensions) if extensions else None
@@ -77,7 +77,7 @@ def search(query, top, min_score, plain):
 
     api_key = get_api_key()
     if not api_key:
-        click.echo("Error: GOOGLE_API_KEY environment variable not set.", err=True)
+        click.echo("Error: No API key found. Set GOOGLE_API_KEY env var or run 'efind' to configure.", err=True)
         sys.exit(1)
 
     try:
@@ -154,7 +154,7 @@ def watch(path):
 
     api_key = get_api_key()
     if not api_key:
-        click.echo("Error: GOOGLE_API_KEY environment variable not set.", err=True)
+        click.echo("Error: No API key found. Set GOOGLE_API_KEY env var or run 'efind' to configure.", err=True)
         sys.exit(1)
 
     try:
@@ -189,7 +189,7 @@ def reindex(path):
 
     api_key = get_api_key()
     if not api_key:
-        click.echo("Error: GOOGLE_API_KEY environment variable not set.", err=True)
+        click.echo("Error: No API key found. Set GOOGLE_API_KEY env var or run 'efind' to configure.", err=True)
         sys.exit(1)
 
     try:

@@ -78,8 +78,12 @@ IGNORE_DIRS = {
 
 
 def get_api_key() -> str | None:
-    """Get the Google API key from environment."""
-    return os.environ.get("GOOGLE_API_KEY")
+    """Get the Google API key from environment or config file."""
+    env_key = os.environ.get("GOOGLE_API_KEY")
+    if env_key:
+        return env_key
+    from embedded_finder.config_store import get_config_value
+    return get_config_value("api_key")
 
 
 def get_db_dir() -> Path:
