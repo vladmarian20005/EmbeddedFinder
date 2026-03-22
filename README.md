@@ -17,34 +17,11 @@ Powered by [Google Gemini Embedding 2](https://ai.google.dev/gemini-api/docs/emb
   <video src="https://github.com/vladmarian20005/EmbeddedFinder/raw/main/assets/demo.mp4" width="600" autoplay loop muted playsinline></video>
 </p>
 
-```
-❯ efind
-
-╭─ ◆ EmbeddedFinder  v0.1.0 ─────────────────────────────────────╮
-│   Semantic file search powered by Gemini Embedding 2             │
-│   ● 142 files  (387 chunks)  │  .embeddedfinder/db              │
-╰──────────────────────────────────────────────────────────────────╯
-
-  Type a query to search, or /help for commands.
-
-❯ functions that validate user authentication tokens
-
-  5 results  (0.3s)  │  "functions that validate user authentication tokens"
-
-   1  95%   PY   auth.py  4K
-        src/auth/auth.py
-        ▸ def validate_token(token: str) -> bool: ...
-
-   2  87%   PY   middleware.py  2K
-        src/middleware/middleware.py
-        ▸ class AuthMiddleware: def process_request(self, req)...
-```
-
 ## Why EmbeddedFinder?
 
-Traditional file search (`grep`, `find`, `ag`) matches exact text. EmbeddedFinder understands *meaning*. Search for "error handling in payments" and find files about exception catching in billing code — even if those exact words never appear.
+Traditional file search (`grep`, `find`, `ag`) matches exact text. EmbeddedFinder understands *meaning*. Search for "error handling in payments" and find files about exception catching in billing code, even if those exact words never appear.
 
-It works on everything: source code, config files, PDFs, Word documents, images, audio, and video — all in one index.
+It works on everything: source code, config files, PDFs, Word documents, images, audio, and video, all in one index.
 
 ## Features
 
@@ -86,7 +63,7 @@ On first launch, a setup wizard walks you through:
 2. The key is validated and saved securely to `~/.config/embeddedfinder/config.json`
 3. Optionally index a directory right away
 
-That's it — start searching.
+That's it. Start searching.
 
 ### Already have a key?
 
@@ -228,7 +205,7 @@ The API key can also be stored via the setup wizard or `/key set`, which saves i
 
 ```
 embedded_finder/
-├── cli.py            # Click CLI — subcommands + TUI launcher
+├── cli.py            # Click CLI, subcommands + TUI launcher
 ├── tui.py            # Interactive Rich-based REPL
 ├── config.py         # Settings, supported extensions, env vars
 ├── config_store.py   # Persistent config file management
