@@ -2,7 +2,7 @@
   <h1 align="center">EmbeddedFinder</h1>
   <p align="center">
     <strong>Semantic file search for your local filesystem.</strong><br>
-    Ask questions in plain English — find what you need across code, documents, images, audio, and video.
+    Ask questions in plain English - find what you need across code, documents, images, audio, and video.
   </p>
   <p align="center">
     <a href="https://pypi.org/project/embedded-finder/"><img alt="PyPI" src="https://img.shields.io/pypi/v/embedded-finder"></a>
@@ -44,15 +44,15 @@ It works on everything: source code, config files, PDFs, Word documents, images,
 
 ## Features
 
-- **Natural language search** — describe what you're looking for, not keywords
-- **Multimodal indexing** — code, text, PDFs, DOCX, images, audio, and video files
-- **Interactive TUI** — rich terminal UI with slash commands, progress bars, and color-coded results
-- **First-run setup wizard** — guided onboarding with API key validation
-- **Incremental indexing** — content-hashed, only re-processes changed files
-- **Batch embedding** — groups chunks into minimal API calls for fast indexing
-- **File watching** — auto-reindex when files change on disk
-- **One-shot CLI** — scriptable commands for CI/automation
-- **Smart ranking** — filename matching, file type relevance, and content-aware scoring
+- **Natural language search** - describe what you're looking for, not keywords
+- **Multimodal indexing** - code, text, PDFs, DOCX, images, audio, and video files
+- **Interactive TUI** - rich terminal UI with slash commands, progress bars, and color-coded results
+- **First-run setup wizard** - guided onboarding with API key validation
+- **Incremental indexing** - content-hashed, only re-processes changed files
+- **Batch embedding** - groups chunks into minimal API calls for fast indexing
+- **File watching** - auto-reindex when files change on disk
+- **One-shot CLI** - scriptable commands for CI/automation
+- **Smart ranking** - filename matching, file type relevance, and content-aware scoring
 
 ## Quick start
 
@@ -116,7 +116,7 @@ Type natural language queries at the `❯` prompt:
 ❯ audio files with speech
 ```
 
-Results show similarity scores, file types, paths, and content snippets — color-coded by relevance.
+Results show similarity scores, file types, paths, and content snippets - color-coded by relevance.
 
 ### Slash commands
 
@@ -183,7 +183,7 @@ efind --version
 | **Audio** | `.mp3` `.wav` `.ogg` `.flac` `.m4a` |
 | **Video** | `.mp4` `.mov` `.avi` `.mkv` `.webm` |
 
-Images, audio, and video are embedded natively using Gemini's multimodal capabilities — no transcription or OCR needed.
+Images, audio, and video are embedded natively using Gemini's multimodal capabilities - no transcription or OCR needed.
 
 PDFs with 6 or fewer pages are embedded natively; larger PDFs use text extraction for efficiency.
 
@@ -204,18 +204,18 @@ PDFs with 6 or fewer pages are embedded natively; larger PDFs use text extractio
            ──→  8. Re-rank & boost        ──→  Results
 ```
 
-- **Content hashing** — files are fingerprinted with SHA-256; re-indexing skips anything unchanged
-- **Batch embedding** — text chunks are grouped into batches (up to 100 per API call) for throughput
-- **Rate limiting** — built-in token bucket limiter respects Gemini API quotas
-- **Parallel processing** — multi-threaded extraction and embedding with up to 4 workers
-- **Smart ranking** — results are boosted by filename match, file type relevance to query, content overlap, and path depth
-- **Directory filtering** — hidden directories (starting with `.`) and common non-content directories (`node_modules`, `__pycache__`, `.venv`, `dist`, `build`, etc.) are automatically skipped during crawling
+- **Content hashing** - files are fingerprinted with SHA-256; re-indexing skips anything unchanged
+- **Batch embedding** - text chunks are grouped into batches (up to 100 per API call) for throughput
+- **Rate limiting** - built-in token bucket limiter respects Gemini API quotas
+- **Parallel processing** - multi-threaded extraction and embedding with up to 4 workers
+- **Smart ranking** - results are boosted by filename match, file type relevance to query, content overlap, and path depth
+- **Directory filtering** - hidden directories (starting with `.`) and common non-content directories (`node_modules`, `__pycache__`, `.venv`, `dist`, `build`, etc.) are automatically skipped during crawling
 
 ## Configuration
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
-| `GOOGLE_API_KEY` | — | Google AI API key (required) |
+| `GOOGLE_API_KEY` | - | Google AI API key (required) |
 | `EMBEDDEDFINDER_DB_DIR` | `.embeddedfinder/db` | Path to the ChromaDB database |
 
 The API key can also be stored via the setup wizard or `/key set`, which saves it to `~/.config/embeddedfinder/config.json` with owner-only permissions.
