@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=77.0.0", "wheel"]
+requires = ["setuptools>=69.0,<77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "embedded-finder"
-version = "0.1.0"
+version = "0.2.2"
 description = "Semantic file search powered by Google Gemini embeddings"
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 authors = [{name = "Vlad Marian"}]
 keywords = ["semantic-search", "embeddings", "gemini", "vector-search", "file-search"]
 classifiers = [
