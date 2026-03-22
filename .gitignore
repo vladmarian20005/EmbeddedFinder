@@ -27,3 +27,7 @@ htmlcov/
 
 .DS_Store
 Thumbs.db
+
+publish.sh
+
+demo-video/
