@@ -13,9 +13,7 @@
 
 Powered by [Google Gemini Embedding 2](https://ai.google.dev/gemini-api/docs/embeddings) and [ChromaDB](https://www.trychroma.com/).
 
-<p align="center">
-  <video src="https://github.com/vladmarian20005/EmbeddedFinder/raw/main/assets/demo.mp4" width="600" autoplay loop muted playsinline></video>
-</p>
+https://github.com/user-attachments/assets/7641c590-834e-4d8f-94a9-089fa449d863
 
 ## Why EmbeddedFinder?
 
