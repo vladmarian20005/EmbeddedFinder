@@ -13,7 +13,7 @@
 
 Powered by [Google Gemini Embedding 2](https://ai.google.dev/gemini-api/docs/embeddings) and [ChromaDB](https://www.trychroma.com/).
 
-https://github.com/user-attachments/assets/17f47155-7b62-480d-8a43-4f180024b3a0
+![IMG_2753](https://github.com/user-attachments/assets/2adc5d23-5020-416a-b899-4d901af2582c)
 
 ## Why EmbeddedFinder?
 
